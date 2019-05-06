@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="jp">
+  <head>
+    <title>リバーシ</title>
+    <meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, minimum-scale=1, maximum-scale=1">
+    <style type="text/css">
+      
+      table {
+        background-color: #303030;
+        margin: 2px;
+        font-size: 18pt;
+      }
+      
+      td {
+        width: 30px;
+        height: 30px;
+        background-color: #209020;
+        color: #209020;
+        text-align: center;
+        vertical-align: middle;
+        border: 0px;
+      }
+      
+      #gameState {
+        position: absolute;
+        top: 4px;
+        left: 290px;
+        height: 260px;
+        padding: 4px;
+        margin: 4px;
+        background-color: #eee;
+        border-radius: 3px;
+        line-height: 22px;
+      }
+      
+      .it {
+        margin: 2px;
+        padding: 2px;
+      }
+      
+      .button {
+        background-color: #ddd;
+        border-radius: 3px;
+      }
+      
+      #startButton {
+        background-color: #ddd;
+        border-radius: 3px;
+        text-align: center;
+        cursor: pointer;
+      }
+      
+      #startButton:hover {
+        background-color: #f76;
+      }
+      
+    </style>
+  </head>
+  <body>
+    
+    <table id="board">
+      <tr><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td></tr>
+      <tr><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td></tr>
+      <tr><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td></tr>
+      <tr><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td></tr>
+      <tr><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td></tr>
+      <tr><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td></tr>
+      <tr><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td></tr>
+      <tr><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td></tr>
+    </table>
+    
+    <div id="gameState">
+      <select id="blackSel" size="1">
+        <option value="0" selected="selected">人間</option>
+        <option value="1">AI</option>
+      </select>
+      vs
+      <select id="whiteSel" size="1">
+        <option value="0" selected="selected">人間</option>
+        <option value="1">AI</option>
+      </select>
+      <div id="startButton" onclick="gameStart()">対局開始</div>
+      <div>黒 <span id="blackCount"></span></div>
+      <div>白 <span id="whiteCount"></span></div>
+      <div id="message"></div>
+			<br>
+    	<div class="it button" onclick="undo();" style="cursor: pointer;">一手戻す</div>
+    	<div class="it button" onclick="ai();" style="cursor: pointer;">AIに打たせる</div>
+    </div>
+		
+		<div id="record">
+		</div>
+    
+    <!-- div id="message" class="it"></div -->
+    
+    <script type="text/javascript">
+      
+      function Board() {
+        this.cells = new Array(64);
+        this.putable = new Array();
+        this.turn = 1;
+        this.count = undefined;
+        this.lastPut = -1;
+      };
+      
+      Board.prototype.init = function() {
+        for(var i = 0; i < 64; ++i) {
+          this.cells[i] = 0;
+        }
+        this.cells[3 * 8 + 4] = 1;
+        this.cells[4 * 8 + 3] = 1;
+        this.cells[3 * 8 + 3] = 2;
+        this.cells[4 * 8 + 4] = 2;
+        
+        this.calcPutable();
+        this.count = [60, 2, 2];
+      };
+      
+      Board.prototype.calcPutable = function() {
+        var ii = 0;
+        var t = this.turn;
+        var nt = 3 - this.turn;
+        
+        for(var i = 0; i < 8; ++i) {
+          for(var j = 0; j < 8; ++j) {
+            if(this.cells[ii] == 0) {
+              Check: {
+                var k = ii - 9;
+                if(1 < j && 1 < i && this.cells[k] == nt) {
+                  k -= 9;
+                  var l = Math.min(j, i) - 1;
+                  do {
+                    var c = this.cells[k];
+                    if(c == 0) {
+                      break;
+                    }
+                    if(c == t) {
+                      this.putable.push(ii);
+                      break Check;
+                    }
+                    k -= 9;
+                    l -= 1;
+                  } while(0 != l);
+                }
+                
+                k = ii - 8;
+                if(1 < i && this.cells[k] == nt) {
+                  k -= 8;
+                  var l = i - 1;
+                  do {
+                    var c = this.cells[k];
+                    if(c == 0) {
+                      break;
+                    }
+                    if(c == t) {
+                      this.putable.push(ii);
+                      break Check;
+                    }
+                    k -= 8;
+                    l -= 1;
+                  } while(0 != l);
+                }
+                
+                k = ii - 7;
+                if(j < 6 && 1 < i && this.cells[k] == nt) {
+                  k -= 7;
+                  var l = Math.min(7 - j, i) - 1;
+                  do {
+                    var c = this.cells[k];
+                    if(c == 0) {
+                      break;
+                    }
+                    if(c == t) {
+                      this.putable.push(ii);
+                      break Check;
+                    }
+                    k -= 7;
+                    l -= 1;
+                  } while(0 != l);
+                }
+                
+                k = ii - 1;
+                if(1 < j && this.cells[k] == nt) {
+                  k -= 1;
+                  var l = j - 1;
+                  do {
+                    var c = this.cells[k];
+                    if(c == 0) {
+                      break;
+                    }
+                    if(c == t) {
+                      this.putable.push(ii);
+                      break Check;
+                    }
+                    k -= 1;
+                    l -= 1;
+                  } while(0 != l);
+                }
+                
+                k = ii + 1;
+                if(j < 6 && this.cells[k] == nt) {
+                  k += 1;
+                  var l = 6 - j;
+                  do {
+                    var c = this.cells[k];
+                    if(c == 0) {
+                      break;
+                    }
+                    if(c == t) {
+                      this.putable.push(ii);
+                      break Check;
+                    }
+                    k += 1;
+                    l -= 1;
+                  } while(0 != l);
+                }
+                
+                k = ii + 7;
+                if(1 < j && i < 6 && this.cells[k] == nt) {
+                  k += 7;
+                  var l = Math.min(j, 7 - i) - 1;
+                  do {
+                    var c = this.cells[k];
+                    if(c == 0) {
+                      break;
+                    }
+                    if(c == t) {
+                      this.putable.push(ii);
+                      break Check;
+                    }
+                    k += 7;
+                    l -= 1;
+                  } while(0 != l);
+                }
+                
+                k = ii + 8;
+                if(i < 6 && this.cells[k] == nt) {
+                  k += 8;
+                  var l = 6 - i;
+                  do {
+                    var c = this.cells[k];
+                    if(c == 0) {
+                      break;
+                    }
+                    if(c == t) {
+                      this.putable.push(ii);
+                      break Check;
+                    }
+                    k += 8;
+                    l -= 1;
+                  } while(0 != l);
+                }
+                
+                k = ii + 9;
+                if(j < 6 && i < 6 && this.cells[k] == nt) {
+                  k += 9;
+                  var l = 6 - Math.max(j, i);
+                  do {
+                    var c = this.cells[k];
+                    if(c == 0) {
+                      break;
+                    }
+                    if(c == t) {
+                      this.putable.push(ii);
+                      break Check;
+                    }
+                    k += 9;
+                    l -= 1;
+                  } while(0 != l);
+                }
+                
+              }
+            }
+            ii += 1;
+          }
+        }
+      };
+      
+      Board.prototype.print = function() {
+        var b = document.getElementById("board").children[0];
+        for(var i = 0; i < 8; ++i) {
+          var br = b.children[i];
+          for(var j = 0; j < 8; ++j) {
+            var bd = br.children[j];
+            var idx = i * 8 + j;
+            if(idx == this.lastPut) {
+              bd.style.backgroundColor = "#107010";//"#40b040";
+            } else {
+              bd.style.backgroundColor = "#209020";
+            }
+            if(this.putable.indexOf(idx) != -1) {
+              bd.style.color = "#bc2";//["#555", "#bbb"][this.turn - 1];
+            } else {
+              bd.style.color = ["#209020", "#222", "#eee"][this.cells[idx]];
+            }
+            /*
+            if(idx == this.lastPut) {
+              bd.style.backgroundColor = "#107010";
+              bd.style.color = ["#209020", "#222", "#eee"][this.cells[idx]];
+            } else if(this.putable.indexOf(idx) != -1) {
+              bd.style.backgroundColor = "#40b040";
+              bd.style.color = "#40b040";
+            } else {
+              bd.style.backgroundColor = "#209020";
+              bd.style.color = ["#209020", "#222", "#eee"][this.cells[idx]];
+            }*/
+          }
+        }
+        
+        document.getElementById("blackCount").innerHTML = "" + this.count[1];
+        document.getElementById("whiteCount").innerHTML = "" + this.count[2];
+        if(this.isEnd()) {
+          if(this.count[1] == this.count[2]) {
+            document.getElementById("message").innerHTML = "引き分けです";
+          } else if(this.count[2] < this.count[1]) {
+            document.getElementById("message").innerHTML = "黒 の勝ちです";
+          } else {
+            document.getElementById("message").innerHTML = "白 の勝ちです";
+          }
+        } else {
+          document.getElementById("message").innerHTML = (this.turn == 1 ? "黒 の番です" : "白 の番です");
+        }
+      };
+			
+			Board.prototype.newPutNoCheck = function(x, y, idx) {
+        return this.putNoCheck(x, y, idx, new Board());
+			};
+      
+      Board.prototype.putNoCheck = function(x, y, idx, nb) {
+        nb.lastPut = idx;
+        
+        for(var i = 0; i < 64; ++i) {
+          nb.cells[i] = this.cells[i];
+        }
+        
+        var t = this.turn;
+        nb.cells[idx] = t;
+        var nt = 3 - t;
+        
+        nb.count = [this.count[0], this.count[1], this.count[2]];
+        nb.count[0] -= 1;
+        var flipCnt = 0;
+        
+                var k = idx - 9;
+                if(1 < x && 1 < y && nb.cells[k] == nt) {
+                  k -= 9;
+                  var l = Math.min(x, y) - 1;
+                  do {
+                    var c = nb.cells[k];
+                    if(c == 0) {
+                      break;
+                    }
+                    if(c == t) {
+                      k += 9;
+                      do {
+                        nb.cells[k] = t;
+                        flipCnt += 1;
+                        
+                        k += 9;
+                      } while(idx != k);
+                      break;
+                    }
+                    k -= 9;
+                    l -= 1;
+                  } while(0 != l);
+                }
+                
+                k = idx - 8;
+                if(1 < y && nb.cells[k] == nt) {
+                  k -= 8;
+                  var l = y - 1;
+                  do {
+                    var c = nb.cells[k];
+                    if(c == 0) {
+                      break;
+                    }
+                    if(c == t) {
+                      k += 8;
+                      do {
+                        nb.cells[k] = t;
+                        flipCnt += 1;
+                        
+                        k += 8;
+                      } while(idx != k);
+                      break;
+                    }
+                    k -= 8;
+                    l -= 1;
+                  } while(0 != l);
+                }
+                
+                k = idx - 7;
+                if(x < 6 && 1 < y && nb.cells[k] == nt) {
+                  k -= 7;
+                  var l = Math.min(7 - x, y) - 1;
+                  do {
+                    var c = nb.cells[k];
+                    if(c == 0) {
+                      break;
+                    }
+                    if(c == t) {
+                      k += 7;
+                      do {
+                        nb.cells[k] = t;
+                        flipCnt += 1;
+                        
+                        k += 7;
+                      } while(idx != k);
+                      break;
+                    }
+                    k -= 7;
+                    l -= 1;
+                  } while(0 != l);
+                }
+                
+                k = idx - 1;
+                if(1 < x && nb.cells[k] == nt) {
+                  k -= 1;
+                  var l = x - 1;
+                  do {
+                    var c = nb.cells[k];
+                    if(c == 0) {
+                      break;
+                    }
+                    if(c == t) {
+                      k += 1;
+                      do {
+                        nb.cells[k] = t;
+                        flipCnt += 1;
+                        
+                        k += 1;
+                      } while(idx != k);
+                      break;
+                    }
+                    k -= 1;
+                    l -= 1;
+                  } while(0 != l);
+                }
+                
+                k = idx + 1;
+                if(x < 6 && nb.cells[k] == nt) {
+                  k += 1;
+                  var l = 6 - x;
+                  do {
+                    var c = nb.cells[k];
+                    if(c == 0) {
+                      break;
+                    }
+                    if(c == t) {
+                      k -= 1;
+                      do {
+                        nb.cells[k] = t;
+                        flipCnt += 1;
+                        
+                        k -= 1;
+                      } while(idx != k);
+                      break;
+                    }
+                    k += 1;
+                    l -= 1;
+                  } while(0 != l);
+                }
+                
+                k = idx + 7;
+                if(1 < x && y < 6 && nb.cells[k] == nt) {
+                  k += 7;
+                  var l = Math.min(x, 7 - y) - 1;
+                  do {
+                    var c = nb.cells[k];
+                    if(c == 0) {
+                      break;
+                    }
+                    if(c == t) {
+                      k -= 7;
+                      do {
+                        nb.cells[k] = t;
+                        flipCnt += 1;
+                        
+                        k -= 7;
+                      } while(idx != k);
+                      break;
+                    }
+                    k += 7;
+                    l -= 1;
+                  } while(0 != l);
+                }
+                
+                k = idx + 8;
+                if(y < 6 && nb.cells[k] == nt) {
+                  k += 8;
+                  var l = 6 - y;
+                  do {
+                    var c = nb.cells[k];
+                    if(c == 0) {
+                      break;
+                    }
+                    if(c == t) {
+                      k -= 8;
+                      do {
+                        nb.cells[k] = t;
+                        flipCnt += 1;
+                        
+                        k -= 8;
+                      } while(idx != k);
+                      break;
+                    }
+                    k += 8;
+                    l -= 1;
+                  } while(0 != l);
+                }
+                
+                k = idx + 9;
+                if(x < 6 && y < 6 && nb.cells[k] == nt) {
+                  k += 9;
+                  var l = 6 - Math.max(x, y);
+                  do {
+                    var c = nb.cells[k];
+                    if(c == 0) {
+                      break;
+                    }
+                    if(c == t) {
+                      k -= 9;
+                      do {
+                        nb.cells[k] = t;
+                        flipCnt += 1;
+                        
+                        k -= 9;
+                      } while(idx != k);
+                      break;
+                    }
+                    k += 9;
+                    l -= 1;
+                  } while(0 != l);
+                }
+        
+        nb.count[t] += flipCnt + 1;
+        nb.count[nt] -= flipCnt;
+        
+        nb.turn = nt;
+        nb.calcPutable();
+        if(nb.putable.length == 0) {
+          nb.turn = t;
+          nb.calcPutable();
+        }
+        
+        return nb;
+      };
+      
+      Board.prototype.isEnd = function() {
+        return this.putable.length == 0;
+      };
+      
+      Board.prototype.put = function(x, y) {
+        var idx = y * 8 + x;
+        if(this.putable.indexOf(idx) == -1) {
+          return null;
+        }
+        return this.newPutNoCheck(x, y, idx);
+      };
+      
+      function clickCell(x, y) {
+        var nb = currentBoard.put(x, y);
+        if(nb == null) {
+          return;
+        }
+        boardHistory.push(currentBoard);
+        currentBoard = nb;
+        currentBoard.print();
+        
+        window.setTimeout(nextControle, 100);
+      };
+      
+      function undo() {
+        if(boardHistory.length != 0) {
+          currentBoard = boardHistory[boardHistory.length - 1];
+          boardHistory.length -= 1;
+          currentBoard.print();
+        }
+      };
+      
+      function gameStart() {
+        blackControler =document.getElementById("blackSel").selectedIndex;
+        whiteControler =document.getElementById("whiteSel").selectedIndex;
+        
+        currentBoard = new Board();
+        currentBoard.init();
+        currentBoard.print();
+        boardHistory.length = 0;
+        
+        nextControle();
+      };
+      
+      function nextControle() {
+        if(currentBoard.turn == 1) {
+          if(blackControler == 1) {
+            ai();
+          }
+        } else {
+          if(whiteControler == 1) {
+            ai();
+          }
+        }
+      };
+      
+      window.onload = function() {
+        
+        var b = document.getElementById("board").children[0];
+        for(var i = 0; i < 8; ++i) {
+          var br = b.children[i];
+          for(var j = 0; j < 8; ++j) {
+            var bd = br.children[j];
+            
+            bd.onclick = (function(x, y) {
+              return function() {clickCell(x, y);}
+            })(j, i);
+            
+            bd.style.cursor = "pointer";
+          }
+        }
+        
+        gameStart();
+      };
+      
+      var currentBoard;
+      var boardHistory = new Array();
+      
+      function ai() {
+        if(currentBoard.isEnd()) {
+          return;
+        }
+        
+        //var idx = currentBoard.putable[0];
+        /*
+        var idx;
+        var ms = 0;
+        for(var i = 0; i < currentBoard.putable.length; ++i) {
+          var ii = currentBoard.putable[i];
+          var b = currentBoard.putNoCheck(ii % 8, (ii / 8) << 0, ii);
+          
+          var s = (currentBoard.turn == 1 ? b.countBlack() : b.countWhite());
+          if(ms < s) {
+            idx = ii;
+            ms = s;
+          }
+        }*/
+        
+        var idx = alpha_beta(currentBoard, 6);
+        //var idx = mini_max(currentBoard, 4);
+        
+        clickCell(idx % 8, (idx / 8) << 0);
+      };
+      
+      function mini_max(board, depth) {
+        var idx;
+        var ms = board.turn == 1 ? -10000 : 10000;
+				var nb = new Board();
+        for(var i = 0, len = board.putable.length; i < len; ++i) {
+          var ii = board.putable[i];
+					
+					nb.putable.length = 0;
+          var b = board.putNoCheck(ii % 8, (ii / 8) << 0, ii, nb);
+          
+          var s = mini_max_(b, depth);
+          if((board.turn != 1) ^ (ms < s)) {
+            idx = ii;
+            ms = s;
+          }
+        }
+        
+        return idx;
+      };
+      
+      function mini_max_(board, depth) {
+        if(board.isEnd()) {
+          if(board.count[1] == board.count[2]) {
+            return 0;
+          } else if(board.count[2] < board.count[1]) {
+            return 9999;
+          } else {
+            return -9999;
+          }
+        } else if(depth == 0) {
+          return evalBoard(board);
+        }
+        
+				var nb = new Board();
+        if(board.turn == 1) {
+          var ms = -10000;
+          for(var i = 0, len = board.putable.length; i < len; ++i) {
+            var ii = board.putable[i];
+						
+						nb.putable.length = 0;
+            var b = board.putNoCheck(ii % 8, (ii / 8) << 0, ii, nb);
+            
+            var s = mini_max_(b, depth - 1);
+            if(ms < s) {
+              ms = s;
+            }
+          }
+        } else {
+          var ms = 10000;
+          for(var i = 0, len = board.putable.length; i < len; ++i) {
+            var ii = board.putable[i];
+						
+						nb.putable.length = 0;
+            var b = board.putNoCheck(ii % 8, (ii / 8) << 0, ii, nb);
+            
+            var s = mini_max_(b, depth - 1);
+            if(s < ms) {
+              ms = s;
+            }
+          }
+        }
+        
+        return ms;
+      };
+      
+      function alpha_beta(board, depth) {
+        var idx;
+        var ms = board.turn == 1 ? -10000 : 10000;
+				var nb = new Board();
+        for(var i = 0, len = board.putable.length; i < len; ++i) {
+          var ii = board.putable[i];
+					
+					nb.putable.length = 0;
+          var b = board.putNoCheck(ii % 8, (ii / 8) << 0, ii, nb);
+          
+          var s = alpha_beta_(b, depth, -10000, 10000);
+          if((board.turn != 1) ^ (ms < s)) {
+            idx = ii;
+            ms = s;
+          }
+        }
+        
+        return idx;
+      };
+      
+      function alpha_beta_(board, depth, alpha, beta) {
+        if(board.isEnd()) {
+          if(board.count[1] == board.count[2]) {
+            return 0;
+          } else if(board.count[2] < board.count[1]) {
+            return 9999;
+          } else {
+            return -9999;
+          }
+        } else if(depth == 0) {
+          return evalBoard(board);
+        }
+        
+				var nb = new Board();
+        if(board.turn == 1) {
+          for(var i = 0, len = board.putable.length; i < len; ++i) {
+            var ii = board.putable[i];
+					
+						nb.putable.length = 0;
+						var b = board.putNoCheck(ii % 8, (ii / 8) << 0, ii, nb);
+            
+            alpha = Math.max(alpha, alpha_beta_(b, depth - 1, alpha, beta));
+            if(alpha >= beta) {
+              return beta;
+            }
+          }
+          return alpha;
+        } else {
+          for(var i = 0, len = board.putable.length; i < len; ++i) {
+            var ii = board.putable[i];
+					
+						nb.putable.length = 0;
+						var b = board.putNoCheck(ii % 8, (ii / 8) << 0, ii, nb);
+            
+            beta = Math.min(beta, alpha_beta_(b, depth - 1, alpha, beta));
+            if(alpha >= beta) {
+              return alpha;
+            }
+          }
+          return beta;
+        }
+      };
+      
+      function evalBoard(board) {
+        var score = 0;
+				var weight = [
+					120, -20, 20, 5, 5, 20, -20, 120,
+					-20, -40, -5, -5, -5, -5, -40, -20,
+					20, -5, 15, 3, 3, 15, -5, 20,
+					5, -5, 3, 3, 3, 3, -5, 5,
+					5, -5, 3, 3, 3, 3, -5, 5,
+					20, -5, 15, 3, 3, 15, -5, 20,
+					-20, -40, -5, -5, -5, -5, -40, -20,
+					120, -20, 20, 5, 5, 20, -20, 120
+				];
+        
+        if(10 < board.count[0]) {
+          
+          if(board.turn == 1) {
+            score += board.putable.length * 15;
+          } else {
+            score -= board.putable.length * 15;
+          }
+					
+					for(var i = 0; i < 64; ++i) {
+						if(board.cells[i] == 1) {
+							score += weight[i];
+						} else if(board.cells[i] == 2) {
+							score -= weight[i];
+						}
+					}
+          
+        } else {
+          
+          score += board.count[1] - board.count[2];
+          
+        }
+        
+        return score;
+      };
+      
+      //window.onmousedown = function() {
+      //  return false;
+      //};
+      
+    </script>
+  </body>
+</html>
