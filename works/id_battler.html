@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<title>IDバトラー</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, minimum-scale=1, maximum-scale=1">
+<style>
+
+	body {
+		font-family: Consolas, 'Courier New', Courier, Monaco, monospace;
+		font-size: small;
+	}
+
+input[type="text"] {
+	border: solid 2px;
+	padding: 4px;
+}
+
+input[type="button"] {
+	border: solid 2px;
+	padding: 4px 8px;
+	background: #FFEE33;
+	cursor: pointer;
+}
+
+	.status {
+		display: inline-block;
+		border: solid 2px;
+    border-radius: 8px;
+    padding: 4px;
+    margin: 4px;
+		width: 20em;
+	}
+
+#message {
+	display: inline-block;
+	border: solid 2px;
+  border-radius: 8px;
+  padding: 4px;
+  margin: 4px;
+	width: 20em;
+	height: 4.5em;
+	overflow-y: auto;
+	outline: none;
+	transition: height 0.2s;
+}
+
+#message:focus {
+	height: 30em;
+}
+
+	.masked {
+		display: none;
+	}
+
+	.footer {
+		opacity: 0.5;
+		text-align: center;
+	}
+
+</style>
+	</head>
+	<body>
+	<div>
+	<div>
+	ID1: <input id="id0" type="text" placeholder="IDを入力">
+	ID2: <input id="id1" type="text" placeholder="IDを入力">
+  <input type="button" value="Fight!" onclick="fight()">
+  </div>
+	<div id="gameView" class="masked">
+	<div>
+  <div class="status">
+	<div id="status0"></div>
+	<div id="hpGauge0"></div>
+  </div>
+  <div class="status">
+	<div id="status1"></div>
+	<div id="hpGauge1"></div>
+  </div>
+  </div>
+  <div id="message" tabindex="5">
+	</div>
+	<div>
+	メッセージスピード:
+	<select id="messageSpeedSelector" onchange="changeMessageSpeed()">
+	<option value="1000">普通</option>
+	<option value="500">すこし速い</option>
+	<option value="200">速い</option>
+	<option value="50">すごく速い</option>
+	</select>
+	</div>
+  </div>
+	<div class="footer">IDバトラー 2.0</div>
+</div>
+
+<script>
+
+if(!String.prototype.trim) {
+  String.prototype.trim = function () {
+    return this.replace(/^\s+|\s+$/g,'');
+  };
+}
+
+// primes 1578397 3622783 3628561 3628571 10461401779 74358349271
+
+function makeSeed(src) {
+	var a = 123456789;
+	for (var i = 0; i < src.length; ++i) {
+		var x = src.charCodeAt(i);
+		a = (a * 3622783 + x * 3628571) % 583964556541679;
+	}
+	return a;
+}
+
+var abilities = [
+	"なし",
+	"自然回復",
+	"まれにクリティカル",
+	"なかなか倒れない",
+	"まれに攻撃反射",
+	"ピンチのとき攻撃2倍",
+	"相手の特殊能力無効",
+	"中盤から本気出す",
+	"ステータス交換",
+	"攻撃時まれにHP奪う",
+	"一定時間パワーアップ",
+	"ほぼ必中",
+	"連続攻撃させない",
+];
+
+var turnMax = 80;
+var slowStarterWarmUpTime = 30;
+var powerupEndTime = 15;
+
+function Fighter(id) {
+	id = "" + id;
+	var seed = makeSeed(id);
+	this.id = id;
+	this.seed = seed;
+	this.maxHp     = seed % 1489 % 171 + 30;// 最大HP
+	this.attack    = seed % 137 % 109 + 20; // 攻撃
+	this.defense   = seed % 139 % 109 + 20; // 防御
+	this.agility   = seed % 149 % 55 + 10;  // 素早さ
+	this.dexterity = seed % 151 % 55 + 10;  // 命中
+	this.evasion   = seed % 163 % 33;       // 回避
+	this.ability   = abilities[seed % 179 % abilities.length];
+
+	if (noAbility) this.ability = "(" + this.ability + ")";
+}
+
+Fighter.prototype.clear = function() {
+	this._maxHp = this.maxHp;
+	this._attack = this.attack;
+	this._defense = this.defense;
+	this._agility = this.agility;
+	this._dexterity = this.dexterity;
+	this._evasion = this.evasion;
+	this._ability = this.ability;
+
+	this._hp = this._maxHp;
+	this._condition = this.seed;
+};
+Fighter.prototype.updateCondition = function() {
+	this._condition = (this._condition * 15783979 + 579472357) % 583964556541679;
+};
+Fighter.prototype.isPinch = function() {
+	return this._hp <= this._maxHp * 0.25;
+};
+Fighter.prototype.isDead = function() {
+	return this._hp === 0;
+};
+Fighter.prototype.dice = function(n, x) {
+	return (this._condition >>> (x || 0)) % 8741 % n;
+};
+Fighter.prototype.toString = function() {
+	return "ID:" + this.id + " のステータス\n最大HP: " + this.maxHp + "\n攻撃: " + this.attack + "\n防御: " + this.defense + "\n素早さ: " + this.agility + "\n命中: " + this.dexterity + "\n回避: " + this.evasion + "\n特殊能力: " + this.ability;
+};
+
+var intervalId = null;
+var interval = 1000;
+
+function fight() {
+	document.getElementById("gameView").className = "";
+
+	window.clearTimeout(intervalId);
+	intervalId = null;
+
+	var id0 = document.getElementById("id0").value.trim();
+	var id1 = document.getElementById("id1").value.trim();
+	var fighter0 = new Fighter(id0);
+	var fighter1 = new Fighter(id1);
+
+	var messageEl = document.getElementById("message");
+	var hpGauge0El = document.getElementById("hpGauge0");
+	var hpGauge1El = document.getElementById("hpGauge1");
+
+	hpGauge0El.innerHTML = "";
+	hpGauge1El.innerHTML = "";
+
+	if (id0 === "") {
+		messageEl.innerHTML = "ID入力してよ! o(｀ω´*)o";
+	} else if (id1 === "") {
+		document.getElementById("status0").innerHTML = fighter0.toString().replace(/\n/g, "<br>");
+		messageEl.innerHTML = "";
+	} else {
+		pushState(id0, id1);
+
+		document.getElementById("status0").innerHTML = fighter0.toString().replace(/\n/g, "<br>");
+		document.getElementById("status1").innerHTML = fighter1.toString().replace(/\n/g, "<br>");
+		messageEl.innerHTML = "";
+
+		var battleLog = battle(fighter0, fighter1);
+		var hp0 = fighter0._maxHp;
+		var hp1 = fighter1._maxHp;
+
+		var turnCount = 0;
+		function step() {
+			if (!(turnCount in battleLog))
+				return;
+			var event = battleLog[turnCount];
+
+			if (event.fighter) {
+				if (fighter0 === event.fighter) {
+					hp0 = event.hp;
+				}
+				if (fighter1 === event.fighter) {
+					hp1 = event.hp;
+				}
+			}
+
+			if (event.healedFighter) {
+				if (fighter0 === event.healedFighter) {
+					hp0 = event.healedHp;
+				}
+				if (fighter1 === event.healedFighter) {
+					hp1 = event.healedHp;
+				}
+			}
+
+			hpGauge0El.innerHTML = "現在のHP: " + gauge(hp0, fighter0._maxHp) + " " + hp0;
+			hpGauge1El.innerHTML = "現在のHP: " + gauge(hp1, fighter1._maxHp) + " " + hp1;
+
+			var message;
+			if (turnCount === 0) {
+				message = event.message;
+			} else {
+				var blankLineNum = 4 - (event.message.split("\n").length - 1);
+				message = event.message + new Array(blankLineNum + 1).join("\n") + messageEl.innerHTML;
+			}
+
+			messageEl.innerHTML = message.replace(/\n/g, "<br>");
+
+			turnCount += 1;
+
+			intervalId = window.setTimeout(step, interval);
+		}
+
+		step();
+	}
+}
+
+function computeFirstAttacker(fighter0, fighter1) {
+	var v0 = fighter0._agility;
+	var v1 = fighter1._agility;
+	return v0 !== v1 ? v0 > v1 : fighter0.id > fighter1.id;
+}
+
+function computeFlipAttacker(fighter0, fighter1) {
+	// 特殊能力「連続攻撃させない」
+	if (fighter1._ability === "連続攻撃させない")
+		return true;
+
+	var v0 = fighter0._agility + fighter0.dice(45, 4);
+	var v1 = fighter1._agility + fighter1.dice(110, 4);
+	return v0 !== v1 ? v0 < v1 : fighter0.id < fighter1.id;
+}
+
+function computeHit(fighter0, fighter1) {
+	// 特殊能力「ほぼ必中」
+	if (fighter0._ability === "ほぼ必中")
+		return fighter0.dice(81) + fighter1.dice(21) < 95; // 95%の確率でヒット
+	return (fighter0._dexterity - fighter1._evasion) > (fighter1.dice(15) - fighter0.dice(30));
+}
+
+function computeDamage(fighter0, fighter1, rate) {
+	var effectiveAttack  = fighter0._attack + fighter0.dice(25);
+	var effectiveDefense = fighter1._defense + fighter1.dice(25);
+	return Math.round(5 * rate * effectiveAttack / effectiveDefense + 1);
+}
+
+function computeHealedHp(fighter) {
+	return Math.min(fighter.dice(4, 3) + 1 + fighter._hp, fighter._maxHp);
+}
+
+function battle(fighter0, fighter1) {
+	var log = [];
+	var fighters = [fighter0, fighter1];
+
+	fighter0.clear();
+	fighter1.clear();
+
+	// 最初の攻撃側決定
+	if (!computeFirstAttacker(fighters[0], fighters[1])) {
+		fighters.reverse();
+	}
+
+	// 開始宣言
+	log.push({
+		type: "message",
+		message: fighter0.id + " vs " + fighter1.id + " バトル開始!",
+	});
+
+	// 特殊能力「相手の特殊能力無効」
+	if (fighters[0]._ability === "相手の特殊能力無効") {
+		fighters[1]._ability = "無効";
+		log.push({
+			type: "action",
+			message: fighters[0].id + " は " + fighters[1].id + " の特殊能力を無効にした!",
+		});
+	}
+	if (fighters[1]._ability === "相手の特殊能力無効") {
+		fighters[0]._ability = "無効";
+		log.push({
+			type: "action",
+			message: fighters[1].id + " は " + fighters[0].id + " の特殊能力を無効にした!",
+		});
+	}
+
+	// 先攻、特殊能力「ステータス交換」
+	swapStatus(fighters[0], fighters[1], log);
+	// 先攻、特殊能力「一定時間パワーアップ」
+	statusUp(fighters[0], log);
+
+	// 後攻、特殊能力「ステータス交換」
+	swapStatus(fighters[1], fighters[0], log);
+	// 後攻、特殊能力「一定時間パワーアップ」
+	statusUp(fighters[1], log);
+
+	var turnCount = 0;
+
+	while (true) {
+		// 特殊能力「中盤から本気出す」のメッセージ
+		if (fighters[0]._ability === "中盤から本気出す" && turnCount === slowStarterWarmUpTime) {
+			log.push({
+				type: "action",
+				message: fighters[0].id + " は本気になった",
+			});
+		}
+		if (fighters[1]._ability === "中盤から本気出す" && turnCount === slowStarterWarmUpTime) {
+			log.push({
+				type: "action",
+				message: fighters[1].id + " は本気になった",
+			});
+		}
+
+		// 特殊能力「一定時間パワーアップ」のメッセージ
+		revertStatus(fighters[0], turnCount, log);
+		revertStatus(fighters[1], turnCount, log);
+
+		// 攻撃を行う
+		attack(fighters[0], fighters[1], turnCount, log);
+
+		// 終了判定
+		if (fighters[0].isDead() && fighters[1].isDead()) {
+			log.push({
+				type: "result",
+				winner: null,
+				message: "引き分け",
+			});
+		} else if (fighters[1].isDead()) {
+			log.push({
+				type: "result",
+				winner: fighters[0],
+				message: fighters[0].id + " の勝利!!!",
+			});
+			break;
+		} else if (fighters[0].isDead()) {
+			log.push({
+				type: "result",
+				winner: fighters[1],
+				message: fighters[1].id + " の勝利!!!",
+			});
+			break;
+		}
+
+		// 特殊能力「自然回復」
+		naturalHeal(fighters[0], log);
+		naturalHeal(fighters[1], log);
+
+		// タイムアップ判定
+		if (++turnCount >= turnMax) {
+			var winner = null;
+			var message = "タイムアップ!\n判定により...\n";
+			if (fighter0._hp === fighter1._hp) {
+				message += "引き分け";
+			} else if (fighter0._hp > fighter1._hp) {
+				winner = fighter0;
+				message += fighter0.id + " の勝利!";
+			} else {
+				winner = fighter1;
+				message += fighter1.id + " の勝利!";
+			}
+			log.push({
+				type: "result",
+				winner: winner,
+				message: message,
+			});
+			break;
+		}
+
+		// 攻撃側変化
+		if (computeFlipAttacker(fighters[0], fighters[1])) {
+			fighters.reverse();
+		}
+
+		// 調子が変わる
+		fighters[0].updateCondition();
+		fighters[1].updateCondition();
+	}
+
+	return log;
+}
+
+function attack(fighter0, fighter1, turn, log) {
+	var effectiveAbility0 = fighter0._ability;
+	var effectiveAbility1 = fighter1._ability;
+
+	var message;
+	message = fighter0.id + " の攻撃! ";
+
+	if (computeHit(fighter0, fighter1)) {
+		var damageRate = 1;
+
+		// 特殊能力「中盤から本気出す」
+		if (effectiveAbility0 === "中盤から本気出す") {
+			if (turn < slowStarterWarmUpTime)
+				damageRate *= 0.5;
+			else
+				damageRate *= 2.5;
+		}
+
+		// 特殊能力「ピンチのとき攻撃2倍」
+		if (effectiveAbility0 === "ピンチのとき攻撃2倍" && fighter0.isPinch()) {
+			damageRate *= 2;
+			message += "\n" + fighter0.id + " の必死の一撃! ";
+		}
+
+		// 特殊能力「まれにクリティカル」
+		if (effectiveAbility0 === "まれにクリティカル" && fighter0.dice(4) === 1) {
+			damageRate *= 2;
+			message += "\nクリティカルヒット! ";
+		}
+
+		var damage = computeDamage(fighter0, fighter1, damageRate);
+
+		// 特殊能力「まれに攻撃反射」
+		if (effectiveAbility1 === "まれに攻撃反射" && fighter1.dice(6, 1) === 1) {
+			message += "\n" + fighter1.id + " は攻撃を反射した! ";
+
+			var damagedHp = Math.max(0, fighter0._hp - damage);
+
+			message += "\n" + fighter0.id + " に " + damage + " のダメージ";
+			fighter0._hp = damagedHp;
+
+			log.push({
+				type: "action",
+				fighter: fighter0,
+				hp: damagedHp,
+				message: message,
+			});
+
+			// 特殊能力「なかなか倒れない」
+			avoidDeath(fighter0, log);
+		} else {
+			var damagedHp = Math.max(0, fighter1._hp - damage);
+
+			// 特殊能力「攻撃時まれにHP奪う」
+			if (fighter0._ability === "攻撃時まれにHP奪う" && fighter0.dice(5, 1) === 1) {
+				var healedHp = Math.min(fighter0._maxHp, fighter0._hp + (fighter1._hp - damagedHp));
+
+				message += "\n" + fighter1.id + " からHPを " + damage + " 吸いとった!";
+				fighter1._hp = damagedHp;
+				fighter0._hp = healedHp;
+
+				log.push({
+					type: "action",
+					fighter: fighter1,
+					hp: damagedHp,
+					healedFighter: fighter0,
+					healedHp: healedHp,
+					message: message,
+				});
+			} else {
+				message += "\n" + fighter1.id + " に " + damage + " のダメージ";
+				fighter1._hp = damagedHp;
+
+				log.push({
+					type: "action",
+					fighter: fighter1,
+					hp: damagedHp,
+					message: message,
+				});
+			}
+
+			// 特殊能力「なかなか倒れない」
+			avoidDeath(fighter1, log);
+		}
+	} else {
+		message += "\n" + fighter1.id + " は回避した";
+
+		log.push({
+			type: "action",
+			message: message,
+		});
+	}
+}
+
+function statusUp(fighter, log) {
+	if (fighter._ability === "一定時間パワーアップ") {
+		fighter._attack += 15;
+		fighter._defense += 15;
+
+		log.push({
+			type: "action",
+			message: fighter.id + " の攻撃・防御がアップした!",
+		});
+	}
+}
+
+function revertStatus(fighter, turnCount, log) {
+	if (fighter._ability === "一定時間パワーアップ" && turnCount === powerupEndTime) {
+		fighter._attack -= 15;
+		fighter._defense -= 15;
+
+		log.push({
+			type: "action",
+			message: fighter.id + " の攻撃・防御が元に戻った",
+		});
+	}
+}
+
+function swapStatus(fighter0, fighter1, log) {
+	if (fighter0._ability === "ステータス交換") {
+		var candidates = "maxHp attack defense agility dexterity evasion".split(" ");
+		// 相手の方が優れているパラメータを集める
+		var goodCandidates = candidates.filter(function(x) {
+			return fighter0["_" + x] < fighter1["_" + x];
+		});
+
+		// 優れているパラメータがなかったら全パラメータを候補にする
+		if (goodCandidates.length === 0)
+			goodCandidates = candidates;
+
+		var param = goodCandidates[fighter1.dice(goodCandidates.length, 3)];
+		fighter0["_" + param] = [fighter1["_" + param], fighter1["_" + param] = fighter0["_" + param]][0];
+		if (param === "maxHp") {
+			fighter0._hp = ~~(fighter0._hp * fighter0._maxHp / fighter1._maxHp);
+			fighter1._hp = ~~(fighter1._hp * fighter1._maxHp / fighter0._maxHp);
+		}
+
+		log.push({
+			type: "action",
+			swapStatus: param,
+			message: fighter0.id + " は " + fighter1.id + " と「" + getParameterName(param) + "」を交換した!",
+		});
+	}
+}
+
+function naturalHeal(fighter, log) {
+	if (fighter._ability === "自然回復" && fighter._hp < fighter._maxHp && fighter.dice(3, 1) === 1) {
+		var healedHp = computeHealedHp(fighter);
+		if (fighter._hp !== healedHp) {
+			message = fighter.id + " は " + (healedHp - fighter._hp) + " 回復した";
+			fighter._hp = healedHp;
+
+			log.push({
+				type: "action",
+				fighter: fighter,
+				hp: healedHp,
+				message: message,
+			});
+		}
+	}
+}
+
+function avoidDeath(fighter, log) {
+	if (fighter._hp === 0 && fighter._ability === "なかなか倒れない" && fighter.dice(4) !== 1) {
+		fighter._hp = 1;
+		message = fighter.id + " は倒れない!";
+
+		log.push({
+			type: "action",
+			fighter: fighter,
+			hp: fighter._hp,
+			message: message,
+		});
+	}
+};
+
+function getParameterName(param) {
+	if (param[0] === "_")
+		param = param.substr(1);
+
+	return {
+		maxHp: "最大HP",
+		attack: "攻撃",
+		defense: "防御",
+		agility: "素早さ",
+		dexterity: "命中",
+		evasion: "回避",
+	}[param];
+}
+
+function gauge(now, max) {
+	var W = 10;
+	var m = Math.round(now * W / max);
+	return "[" + (new Array(m + 1).join("#")) + (new Array(W - m + 1).join("_")) + "]";
+}
+
+
+function changeMessageSpeed() {
+	var i = +document.getElementById("messageSpeedSelector").value;
+	if (!isNaN(i))
+		interval = i;
+}
+
+function getUrlParameter(key, def) {
+	var str = location.search.split("?");
+	if (str.length < 2) {
+		return def || "";
+	}
+
+	var params = str[1].split("&");
+	for (var i = 0; i < params.length; i++) {
+		var keyVal = params[i].split("=");
+		if (keyVal[0] === key && keyVal.length === 2) {
+			return decodeURIComponent(keyVal[1]);
+		}
+	}
+	return def !== undefined ? def : "";
+};
+
+var noAbility = false;
+
+window.onload = function() {
+	document.getElementById("id0").value = getUrlParameter("a");
+	document.getElementById("id1").value = getUrlParameter("b");
+	interval = getUrlParameter("interval", 1000);
+	noAbility = getUrlParameter("noAbility", false);
+}
+
+function pushState(id0, id1) {
+	if (window.history && window.history.pushState) {
+		var url = window.location.pathname + "?a=" + encodeURIComponent(id0) + "&b=" + encodeURIComponent(id1);
+		try {
+			window.history.pushState(window.location.origin, null, url);
+		} catch (e) {
+		}
+	}
+}
+
+function roundRobin(ids) {
+	var fighters = ids.map(function(id) {
+		if (id instanceof Fighter)
+			return id;
+		return new Fighter(id);
+	});
+	var results = [];
+	var wonCount = {};
+	for (var i = 0; i < fighters.length; ++i) {
+		wonCount[fighters[i].id] = 0;
+	}
+	for (var i = 0; i < fighters.length; ++i) {
+		for (var j = i; j < fighters.length; ++j) {
+			var battleLog = battle(fighters[i], fighters[j]);
+			var lastEvent = battleLog[battleLog.length-1];
+			results.push(fighters[i].id + " vs " + fighters[j].id + " : " + lastEvent.message.replace(/\n/g, " "));
+			if (lastEvent.winner)
+				wonCount[lastEvent.winner.id] += 1;
+		}
+	}
+	return {results: results, wonCount: wonCount};
+}
+
+function strongers(fighterNum, attemptTimes) {
+	var fighters = [];
+	for (var i = 0; i < fighterNum; ++i) {
+		fighters[i] = new Fighter((Math.random() * 100000000 | 0).toString(36));
+	}
+	for (var i = 0; i < attemptTimes; ++i) {
+		var challenger = new Fighter((Math.random() * 100000000 | 0).toString(36));
+		var score = 0;
+		for (var j = 0; j < fighterNum; ++j) {
+			var battleLog = battle(fighters[j], challenger);
+			if (battleLog[battleLog.length-1].winner === challenger)
+				score += 1;
+		}
+		if (fighterNum / 3 < score) {
+			var rrr = roundRobin(fighters);
+			var f = fighters[0];
+			for (var k = 1; k < fighterNum; ++k) {
+				if (rrr.wonCount[fighters[k].id] < rrr.wonCount[f.id]) {
+					f = fighters[k];
+				}
+			}
+			fighters[fighters.indexOf(f)] = challenger;
+		}
+	}
+	return fighters;
+}
+
+</script>
+</body>
+</html>
