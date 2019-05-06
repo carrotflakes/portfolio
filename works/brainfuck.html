@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="jp">
+	<head>
+		<title>brainf*ck</title>
+		<meta charset="utf-8">
+		<style type="text/css">
+			
+
+	textarea {
+		font-family: Consolas, 'Courier New', Courier, Monaco, monospace;
+	}
+	
+		</style>
+	</head>
+	<body>
+	
+	program:<br>
+	<textarea id="src">+++++++++[&gt;++++++++&gt;+++++++++++&gt;+++++&lt;&lt;&lt;-]&gt;.&gt;++.+++++++..+++.&gt;-.------------.&lt;++++++++.--------.+++.------.--------.&gt;+.</textarea><br>
+	<input type="button" value="execute" onclick="execute()">
+	<label><input id="useOptimize" type="checkbox">Enable optimize</label><br>
+	<span id="time"></span><br>
+	input:<br>
+	<textarea id="input"></textarea><br>
+	output:<br>
+	<textarea id="output"></textarea><br>
+	<!--input type="button" value="makeUrl" onclick="makeUrl()"><br>
+	<a id="url" href="#"></a-->
+		
+		
+<script type="text/javascript">
+
+var elmSrc = document.getElementById("src");
+var elmInput = document.getElementById("input");
+var elmOutput = document.getElementById("output");
+var elmUrl = document.getElementById("url");
+
+var getUrlParameter = function(key, def) {
+	var str = location.search.split("?");
+	if (str.length < 2) {
+		return def || "";
+	}
+	
+	var params = str[1].split("&");
+	for (var i = 0; i < params.length; i++) {
+		var keyVal = params[i].split("=");
+		if (keyVal[0] == key && keyVal.length == 2) {
+			return decodeURIComponent(keyVal[1]);
+		}
+	}
+	return def || "";
+};
+
+function build() {
+	var src = elmSrc.value.replace(/[^+\-><\[\].,]/g, "");
+	var prg = [];
+	var stack = [];
+	
+	var addInt = 0;
+	for (var i = 0, len = src.length; i < len; ++i) {
+		switch (src[i]) {
+		case '+':
+		case '-':
+			do {
+				if (src[i] === '+') addInt += 1;
+				else addInt -= 1;
+				i += 1;
+			} while (src[i] === '+' || src[i] === '-');
+			addInt = (addInt % 256 + 256) & 0xff;
+			if (addInt !== 0)
+				prg.push({type: "int", value: addInt});
+			addInt = 0;
+			i -= 1;
+			break;
+		case '>':
+		case '<':
+			do {
+				if (src[i] === '>') addInt += 1;
+				else addInt -= 1;
+				i += 1;
+			} while (src[i] === '>' || src[i] === '<');
+			prg.push({type: "move", value: addInt});
+			addInt = 0;
+			i -= 1;
+			break;
+		case '[':
+			stack.push(prg);
+			prg = [];
+			break;
+		case ']':
+			prg.push({type: "end"});
+			var prg_ = prg;
+			prg = stack.pop();
+			prg.push({type: "while", prg: prg_});
+			break;
+		case '.':
+			prg.push({type: "print"});
+			break;
+		case ',':
+			prg.push({type: "read"});
+			break;
+		}
+	}
+	prg.push({type: "end"});
+	return prg;
+}
+
+function exec(ctx) {
+	var s = ctx.stack.pop(),
+	prg = s.prg,
+	mem = ctx.mem;
+	for (var i = s.ptr, il = prg.length; i < il; ++i) {
+		switch (prg[i].type) {
+		case "int":
+			if (mem[ctx.ptr] === undefined)
+				mem[ctx.ptr] = prg[i].value;
+			else
+				mem[ctx.ptr] = (mem[ctx.ptr] + prg[i].value) & 0xff;
+			break;
+		case "move":
+			ctx.ptr += prg[i].value;
+			break;
+		case "while":
+			if (mem[ctx.ptr]) {
+				ctx.stack.push({prg: prg, ptr: i});
+				prg = prg[i].prg;
+				i = -1;
+				il = prg.length;
+			}
+			break;
+		case "print":
+			ctx.out += String.fromCharCode(mem[ctx.ptr]);
+			break;
+		case "read":
+			if (ctx.input.length === 0) {
+				ctx.stack.push({prg: prg, ptr: i});
+				return exec.bind(null, ctx);
+			}
+			mem[ctx.ptr] = ctx.input.charCodeAt() & 0xff;
+			ctx.input = ctx.input.substring(1);
+			break;
+		case "end":
+			if (ctx.stack.length === 0)	// 終了だよ
+				return null;
+			if (mem[ctx.ptr]) {	// ループするよ
+				i = -1;
+			} else {	// ループから抜けるよ
+				s = ctx.stack.pop();
+				prg = s.prg;
+				i = s.ptr;
+				il = prg.length;
+			}
+			break;
+		case "func":
+			prg[i].func(ctx);
+			break;
+		}
+	}
+	return null;
+}
+
+var kFunctionizeCommandsThreshold = 6;
+
+function optimize(prg) {
+	var oprg = [];
+	var start = 0;
+	for (var i = 0, il = prg.length; i < il; ++i) {
+		if (prg[i].type === "while") {
+			if (mightInterrupt(prg[i].prg)) {	// 割り込みあり
+				prg[i].prg = optimize(prg[i].prg);
+			} else {
+				prg[i] = {type: "func", func: functionize([prg[i]])};
+				continue;
+			}
+		} else if (prg[i].type !== "read" && prg[i].type !== "end") {
+			continue;
+		}
+		if (kFunctionizeCommandsThreshold <= i - start) {	// 関数化する
+			oprg.push({type: "func", func: functionize(prg.slice(start, i))});
+			oprg.push(prg[i]);
+		} else {	// 関数化しない
+			oprg = oprg.concat(prg.slice(start, i + 1));
+		}
+		start = i + 1;
+	}
+	return oprg;
+}
+
+function mightInterrupt(prg) {
+	for (var i = 0, il = prg.length; i < il; ++i) {
+		if (prg[i].type === "read") {
+			return true;
+		} else if (prg[i].type === "while") {
+			if (mightInterrupt(prg[i].prg)) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+function functionize(prg) {
+	var funcStr = functionize_(prg);
+	if (funcStr === null) {
+		return null;
+	}
+	funcStr = "var mem = ctx.mem, ptr = ctx.ptr;/*\n*/" + funcStr + "/*\n*/ctx.ptr = ptr;";
+	return new Function("ctx", funcStr);
+}
+
+
+function functionize_(prg) {
+	var funcStr = "";
+	for (var i = 0; i < prg.length; ++i) {
+		switch (prg[i].type) {
+			case "int":
+				funcStr += "mem[ptr] = mem[ptr] ? (mem[ptr] + " + prg[i].value + ") & 0xff : " + prg[i].value + ";";
+				break;
+			case "move":
+				funcStr += "ptr += " + prg[i].value + ";";
+				break;
+			case "while":
+				var f = functionize_(prg[i].prg);
+				if (f === null) {
+					return null;
+				}
+				funcStr += "while (mem[ptr]) {" + f + "}";
+				break;
+			case "print":
+				funcStr += "ctx.out += String.fromCharCode(mem[ptr]);";
+				break;
+			case "read":
+				// return null;	// 割り込み入るからダメ
+				funcStr += "if (ctx.input.length === 0) return null;mem[ptr] = ctx.input.charCodeAt() & 0xff;ctx.input = ctx.input.substring(1);";
+			case "end":
+				break;
+			case "func":
+				var fs = prg[i].func.toString();
+				fs = fs.substring(fs.indexOf("/*\n*/") + 5,fs.lastIndexOf("/*\n*/"));
+				funcStr += fs;
+				break;
+		}
+	}
+	return funcStr;
+}
+
+var context = null;
+var continuation = null;
+
+var kInitMemorySize = 128;
+
+var useNoInterruptOptimize = false;
+
+function execute() {
+	var optimizeTime = null;
+	var startTime = 0;
+
+	document.getElementById("time").innerHTML = "";
+	
+	var prg = build();
+	if (document.getElementById("useOptimize").checked) {
+		startTime = new Date().getTime();
+		if (useNoInterruptOptimize) {	// 追加の入力を無視するすごい最適化
+			prg = [{type: "func", func: functionize(prg)}];
+		} else {
+			prg = optimize(prg);
+		}
+		optimizeTime = new Date().getTime() - startTime;
+	}
+	
+	console.dir(prg);
+	
+	startTime = new Date().getTime();
+	
+	context = {stack: [{prg: prg, ptr: 0}], mem: new Array(kInitMemorySize), ptr: 0, out: "", input: elmInput.value};
+	continuation = exec(context);
+	
+	var timeText = "";
+	if (continuation === null) {
+		var executeTime = new Date().getTime() - startTime;
+		
+		if (optimizeTime !== null) {
+			timeText = "[Optimize time: " + optimizeTime + " ms, Execute time: " + executeTime + " ms]";
+		} else {
+			timeText = "[Execute time: " + executeTime + " ms]";
+		}
+	} else {
+		if (optimizeTime !== null) {
+			timeText = "[Optimize time: " + optimizeTime + " ms]";
+		}
+	}
+	document.getElementById("time").innerHTML = timeText;
+	
+	elmInput.value = context.input;
+	elmOutput.value = context.out;
+}
+
+function makeUrl() {
+	var src = elmSrc.value;
+	src = encode(src);
+	elmUrl.textContent = "https://googledrive.com/host/0B3SyQ3Tgy_jmaEVBdlFnMEx2dmc/brainfuck.html?c=" + src;
+	elmUrl.href = "https://googledrive.com/host/0B3SyQ3Tgy_jmaEVBdlFnMEx2dmc/brainfuck.html?c=" + src;
+}
+
+window.setInterval(function(e) {
+	if (continuation !== null) {
+		context.input = elmInput.value;
+		continuation = continuation();
+		elmInput.value = context.input;
+		elmOutput.value = context.out;
+	}
+}, 100);
+
+function encode(s) {
+	s = s.replace(/[^+\-><\[\].,]/g, "");
+	var i = 0, src = "", r, l, c;
+	
+	for (var il = s.length; i < il; ++i) {
+		c = 1;
+		r = s[i];
+		l = {'+': 'a', '-': 'd', '>': 'r', '<': 'l', '.': 'o', ',': 'i', '[': 'b', ']': 'q'}[r];
+		
+		while (s[i + 1] === r) {
+			c += 1;
+			i += 1;
+		}
+		if (1 < c) {
+			src += l + c;
+		} else {
+			src += l;
+		}
+	}
+	return src;
+}
+
+function decode(s) {
+	var i = 0, src = "", l = null;
+	
+	for (var il = s.length; i < il; ++i) {
+		switch (s[i]) {
+		case 'a':
+			l = "+";
+			src += l;
+			break;
+		case 'd':
+			l = "-";
+			src += l;
+			break;
+		case 'r':
+			l = ">";
+			src += l;
+			break;
+		case 'l':
+			l = "<";
+			src += l;
+			break;
+		case 'o':
+			l = ".";
+			src += l;
+			break;
+		case 'i':
+			l = ",";
+			src += l;
+			break;
+		case 'b':
+			l = "[";
+			src += l;
+			break;
+		case 'q':
+			l = "]";
+			src += l;
+			break;
+		default:
+			var v = s[i++], c = s.charCodeAt(i);
+			while (48 <= c && c <= 57) {
+				v += s[i];
+				c = s.charCodeAt(++i);
+			}
+			i -= 1;
+			v = +v - 1;
+			for (var j = 0; j < v; ++j) {
+				src += l;
+			}
+		}
+	}
+	return src;
+}
+
+window.onload = function() {
+	console.log("+++++++++[>++++++++>+++++++++++>+++++<<<-]>.>++.+++++++..+++.>-.------------.<++++++++.--------.+++.------.--------.>+.".replace(/>/g, "&gt;").replace(/</g, "&lt;"));
+	
+	var src = getUrlParameter("c", "");
+	if (src !== "")
+		elmSrc.value = decode(src);
+};
+
+</script>
+		
+	</body>
+</html>
