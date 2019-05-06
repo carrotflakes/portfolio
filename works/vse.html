@@ -1,0 +1,4088 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+	<title>Visual S-expression Editor</title>
+	<meta charset="UTF-8">
+	<link rel="shortcut icon" href="./vse.png">
+	<style type="text/css">
+	
+	body	{
+		background-color: #AAAAAF;
+		color: #333339;
+		margin: 4px 0px 4px 4px;
+		overflow-x: hidden;
+		overflow-y: hidden;
+	}
+
+	#header {
+		height: 3px;
+	}
+
+	#tabBar {
+		background-color: #EEEEEE;
+		cursor: pointer;
+		border-radius: 6px 6px 0px 0px;
+		box-shadow: 0px 1px 6px rgba(0, 0, 0, 0.8);
+		padding: 3px 0px 4px 0px;
+		margin: 3px 3px 3px 3px;
+		white-space: nowrap;
+	}
+
+	.tabLabel {
+		background-color: #778899;
+		color: #FDFDFD;
+		border-radius: 5px 5px 0px 0px;
+		padding: 1px 2px 4px 2px;
+		margin: 3px 2px 5px 0px;
+		cursor: pointer;
+	}
+	.tabLabel:hover {
+		background-color: #0088dd;
+	}
+
+	.currentTabLabel {
+		background-color: #0066cc;
+		color: #FDFDFD;
+		border-radius: 5px 5px 0px 0px;
+		padding: 1px 2px 4px 2px;
+		margin: 3px 2px 5px 0px;
+		cursor: pointer;
+	}
+	.currentTabLabel:hover {
+		background-color: #0088dd;
+	}
+
+	.tabCloseButton {
+		color: #778899;
+	}
+	.tabCloseButton:hover {
+		color: #FD6666;
+	}
+
+	.currentTabCloseButton {
+		color: #77BBEE;
+	}
+	.currentTabCloseButton:hover {
+		color: #FD6666;
+	}
+
+	#newTabButton:hover {
+		color: #0066cc;
+	}
+
+	#editCanvas {
+		cursor: default;
+		box-shadow: 0px 1px 6px rgba(0, 0, 0, 0.8);
+	}
+
+	#clipboardAccesser {
+		position: absolute;
+		opacity: 0.0;
+	}
+
+	#textInput {
+		opacity: 0.9;
+		background-color: #FDFDFD;
+		box-shadow: 0px 0px 8px rgba(255, 255, 255, 0.8);
+		position: absolute;
+		display: none;
+		word-wrap: break-word;
+		padding: 1px;
+	}
+	#textInputInvalid {
+		opacity: 0.9;
+		background-color: #FDFDFD;
+		box-shadow: 0px 0px 8px rgba(255, 255, 255, 0.8);
+		position: absolute;
+		display: none;
+		word-wrap: break-word;
+		padding: 1px;
+	}
+
+	#commandInputFrame {
+		color: #B0B0B0;
+		background-color: #666666;
+		border-radius: 5px;
+		position: absolute;
+		display: none;
+		box-shadow: 0px 1px 8px rgba(0, 0, 0, 0.8);
+		padding: 2px 6px 6px 6px;
+		left: 100px;
+		top: 100px;
+		cursor: default;
+	}
+	#commandInput {
+		color: #F0F0F0;
+		background-color: #444444;
+		border-radius: 4px;
+		min-width: 120px;
+		min-height: 20px;
+		width: 400px;
+		margin: 0px;
+		padding: 2px 5px 2px 5px;
+		overflow: hidden;
+		cursor: text;
+	}
+	#commandInputClose {
+		color: #B0B0B0;
+		float: right;
+		cursor: pointer;
+	}
+	#commandInputClose:hover {
+		color: #F05050;
+	}
+
+	#textAutoComplete {
+		background-color: #FDFDFD;
+		box-shadow: 0px 1px 8px rgba(255, 255, 255, 0.8);
+		position: absolute;
+		border: solid 0px;
+		display: none;
+	}
+
+	#footer {
+		font-size: 10pt;
+	}
+
+	#copyright {
+		color: #444444;
+		font-size: 9pt;
+	}
+
+	</style>
+</head>
+<body>
+
+	<div id="header">
+	</div>
+	<span id="tabBar"><span id="newTabButton">＋</span></span>
+	
+	<canvas id="editCanvas" draggable="true"></canvas>
+	<div id="clipboardAccesser" contenteditable="true"></div>
+	<div id="textInput" contenteditable="true"></div>
+	<select id="textAutoComplete" size="10"></select>
+	<div id="commandInputFrame">
+		Command
+		<div id="commandInputClose">×</div>
+		<div id="commandInput" contenteditable="true"></div>
+	</div>
+
+	<div id="footer">
+		<div>
+		このサービスはLocalStorageを使用します
+		</div>
+		<div>
+		<a href="" onclick="preferenceReset()">動作がおかしい時はここをクリックしてLocalStorage上のpreferenceをリセットしてください</a>
+		</div>
+		<div>
+			【推奨環境】<br>
+			ブラウザ : Firefox, Google Chrome 各最新版
+		</div>
+		<div id="copyright" align="center">
+			© 2013 <a href="https://twitter.com/carrotflakes" target="_blank">Carrotflakes</a>
+		</div>
+	</div>
+
+	<script type="text/javascript">
+// ここからスクリプト
+/*
+マウスドラッグによる操作
+prolog unification
+table view  space,Lispで
+コメントに対応
+grid △
+macro
+	アウトラインビュー △
+	整形
+LISPのマクロ
+同アトムハイライト
+TextGenerator メール定型文とか
+popupメニューっぽいView
+サーチとパターンマッチ 強力な機能になりそう
+メモリ。。。
+畳み込みサムネイル化
+何のためにLISPを実装したか？
+	エディタのマクロとして使うため
+	書いたコードを試すため
+textinput　赤くする
+string<->symbol
+ダブルクリックで畳み込み展開
+Menubar
+Function をオブジェクトにする
+LocalStrage Repository オブジェクト化
+CanvasやめてHTML化
+Haskell Prolog
+初期キーバインド
+便利なマクロ集
+CaLISPについて
+XMLHttpRequest
+拡張S式　'() クオートの表現 関数の表現
+PlaneTextView インスペクタ
+View装飾
+入力補完 if cond true false
+auto-tate
+style
+	bold space color semantics
+viewTypee (Cons|Nilの)
+	list
+	pair
+	binary-tree
+	map
+	set
+	hierarchy
+	table?
+	undefined
+方向キーの挙動。。。
+日本語の関数とか
+localStorage-manager
+ホイスト
+.で a| -> (a |)
+Maybe x 条件 代替
+1-5 アトムの色も変える
+副作用はオブジェクトのメソッドのみで
+オブジェクト関数を連続的に呼ぶ (Object Clause1 Clause2 ..)
+
+GDrive
+	DefaultPreference
+	Youkoso
+	Macros
+	CaLISP
+
+(rep-init "sexp" (quote (lambda (x) (alert x))))
+(rep-save "yo" "test" #f (quote (lambda (x) (alert x))))
+(rep-load "yo" (quote (lambda (x) (alert x))))
+(rep-files (quote (lambda (x) (alert x))) (lambda (x) (alert "失敗＞＜")))
+(local-storage-set-item "hoge" (SexpView->string ((window get-current-tab) get-root-node)))
+(alert (local-storage-get-item "hoge"))
+(alert (sexp->string ((window get-preference) get-behavior "keyDown65")))
+(begin (rep-load "yo" (quote (lambda (x) (begin (control-unlock) ((window get-current-tab) set-root-node (string->SexpView x))))) (quote (lambda (x) (control-unlock)))) (control-lock))
+(begin (set! pref (get-preference)) (pref set-font-size 10) (set-preference pref))
+(define Y 
+      (lambda (f) 
+        ((lambda (m) 
+           (f (lambda (a) ((m m) a))))
+         (lambda (m) 
+           (f (lambda (a) ((m m) a)))))))
+(http-get-text "sexpression9.html" (lambda (x) (alert x)))
+(alert (Sexp->string ((get-preference) get-behavior "keyDown9")))
+
+LocalStorage QuickLoadMacro
+
+http://lispuser.net/memo/lisp/2006-12-20-20-36.html
+http://www.aoky.net/articles/peter_norvig/lispy.htm
+
+File Open Save LocalStrage Inport Export
+Edit Undo Redo
+Lisp Eval ResetEnvironment Functions
+*/
+/*
+(CaLISPリファレンス (CaLISPの特徴 LISPをベースにしたプログラミング言語です Schemeに近い動作をするよう作られました S式で記述されます (パラダイム: 関数型 オブジェクト指向) 全てがオブジェクトです "Visual S-expression Editorのマクロとして使用できるよう設計されています") (動作原理 CaLISPコードを動かすことを「評価する」と言います 評価すると何かしら結果を返すことがあります (評価の対象がリストだった場合: はじめにリストの先頭が評価されます その評価の結果によって分岐します (Functionの場合: 関数として評価されます) (Function以外のObjectの場合: Objectのメンバ関数として評価されます)) (評価の対象がSymbolだった場合: 環境からそのSymbolが束縛されている値を返します イメージとしては変数から値を取り出す感じになります) (それ以外の場合: そのものを返します) "注意 CaLISPコードがS式で表現される以上、Cons、Nil、Symbol、String、Num以外のObjectが評価されることはありません") (CaLISP超速チュートリアル ("Hello World!を表示してみよう" (alert "Hello World") alertは式を評価した結果をアラートで表示する命令です 文字列を評価するとその文字列自体が返ってきます) (足し算してみよう (alert (+ 1 2)) カッコで囲むことによりリストとなり、リストを評価することで関数を実行します "リストの中の頭の + が関数名、 + 以降は引数になります" リストは以下のように入れ子して評価することができます (alert (* (+ 2 3) 4))) (リストを作ろう (alert (list 1 2 (+ 1 2))) list関数でリストを作ることができます リストの要素は評価されるので上記のように足し算をしてから入れることができます) (評価したくないとき (alert (quote (1 2 (+ 1 2)))) 関数の引数は強制的に評価されてしまいます 評価させたくないときはquoteを使います quoteは引数を評価せずに返すものです) (手続きを作ろう (define hello (alert "Hello world")) defineはグローバル変数を宣言する命令です 1つ目の引数が定義したい変数名、2つ目の引数がそのボディになります "defineした後、 (hello) と入力することで(alert 'Hello world')を実行できます") (関数を作ろう (define add2 (lambda (x y) (+ x y))) x,yの2つの引数を受け取って足し算して返す関数です 関数はlambdaという特殊形式を用いて実現します lambdaの第一引数が仮引数のリスト、第二引数がボディになります 関数定義はもっと短く記述することができます (define (add2 x y) (+ x y)) これは先程の関数定義と同等のものになります) (条件分岐してみよう (if #t (alert "真です") (alert "偽です")) ifで条件分岐できます 第一引数が真であるとき第二引数が評価され、偽のとき第三引数が評価されます "真は#t、偽は#fで表されますが、それ以外の値は真となります") (もっと条件分岐しよう (cond ((<= x 0) (alert "xは0以下です")) ((< 1 x) (alert "xは1より大きいです")) (else (alert "xは0より大きく1以下です"))) condでC言語のif-else文のような書き方ができます) (いっぱい式を評価しよう (begin (alert "式を順番に評価していくよ") (define hoge "ほげ") (hoge)) beginで複数の式を順番に評価することができます 返り値は最後に評価した結果になります) (一時的な変数を作ろう (let ((one 1) (x (+ one 1))) (alert x)) letで局所変数を使うことができます 第一引数が変数と値のペアのリスト、第二引数が評価される式になります) (変数に代入しよう (begin (set! x 10) (alert x)) set!で変数に破壊的代入ができます) 再帰で繰り返し処理をしよう (begin (define (fact n) (if (= n 1) 1 (* n (fact (- n 1))))) (alert (fact 5))) 関数型言語では一般的に繰り返し処理を再帰で行います) (Object継承関係 (Object (Sexp (Cons) (Nil) (Symbol) (String) (Num)) (SexpView (ConsView) (NilView) (SymbolView) (StringView) (NumView)) (Tab) (Preference) (Function))) (Object一覧 (Object (instanceof)) (Sexp (->string)) (Cons) (Nil) (Symbol) (Num) (SexpView (->string) (->Sexp) (get-parent)) (ConsView (car) (cdr) (get-tate) (set-tate) (get-expand) (set-expand) (get-color-type) (set-color-type) (get-space) (set-space)) (NilView) (SymbolView) (StringView) (NumView) (Tab (get-name) (set-name) (get-root-node) (set-root-node) (get-select-node) (set-select-node) (undo) (redo) (sexp-view-fix) (sexp-view-remove) (sexp-view-insert) (sexp-view-move)) (Preference set-symbol-text-color get-symbol-text-color set-behavior get-behavior set-font-family get-font-family set-font-size get-font-size)) (関数一覧 eq? equal? pair? list? null? symbol? string? int? typeof + - * / not = < > <= >= cons car cdr append list assq assoc assp map take drop iota string-length string-char-at string-substring string-replace string->symbol symbol->string num->string string->num) (特殊形式一覧 quote if set! define lambda and or begin cond when unless let eval) (語録集 (LISP S式で記述されるプログラミング言語です 実装の違いを方言と言い、様々な方言があります (代表的な方言 CommonLisp Scheme)) (Object オブジェクト指向におけるオブジェクトです "いくつかFunctionを持ち、Functionを評価することでObject状態を変化させたり値を返したりします") (環境 値とSymbolの束縛関係を保持しているものです この環境の上でS式の評価が可能になります) (束縛 値に対してSymbolが割り当てられることを束縛と言います 「値がSymbolを束縛する」のであり、「Symbolが値を束縛する」わけではないので注意して下さい) (特殊形式 関数に似た概念ですが、引数が必ずしも評価されるとは限りません)))
+*/
+/*
+(マクロ集 (LocalStorage (LocalStorageにS式をセーブ (let ((ct (get-current-tab)) (rn (ct get-root-node)) (name (ct get-name))) (local-storage-set-item name (SexpView->string rn)))) (LocalStorageからS式をロード (let ((fn "ここにファイル名を入力") (src (local-storage-get-item fn)) (sv (string->SexpView src))) (new-tab fn sv))) (LocalStorageのファイルをリストアップ (alert (map (lambda (idx) (local-storage-key idx)) (iota (local-storage-length)))))) (Tab (Tabをリネーム ((get-current-tab) set-name "ここにタブ名を入力"))))
+*/
+
+//	"keyDown38": '(begin (let ((ct (get-current-tab)) (sn (ct get-select-node))) (unless (or (null? sn) (null? (sn get-parent))) (let ((f (lambda (node) (if ((node get-parent) instanceof "ConsView") (if (and ((node get-parent) get-tate) (eq? node ((node get-parent) cdr)) (((node get-parent) car) instanceof "ConsView")) ((node get-parent) car) (if (eq? node ((node get-parent) car)) node (f (node get-parent)))) node)))) (ct set-select-node (f (sn get-parent)))))) #f)',	// Up
+
+var canvas = document.getElementById("editCanvas");
+var clipboardAccesser = document.getElementById("clipboardAccesser");
+var textAutoComplete = document.getElementById("textAutoComplete");
+
+var vserUrl = "https://script.google.com/macros/s/AKfycbx5LKpH0MuWyL47-mV0smtegv57Gx-sSEmtxT2fpfu8aQTLANb7/exec";
+
+///////////////////////////////////////////////////////////
+
+// 設定とか
+// JSONで書き出せないObjectは入れちゃだめ
+var defaultPreference = {
+	fontFamily: "Arial",
+	fontSize: 11,
+	textHeight: 12,
+	nodeHeight: 14,
+	nodePaddingLeft: 8,
+	nodePaddingRight: 8,
+	nodeInterval: 4,
+	scrollAmount: 30,
+	autoCompleteEnable: true,
+	consViewTateDefault: false,
+	confirmWindowClose: false,
+
+	operationStackMax: 32
+};
+defaultPreference.uiColor = {
+	backgroundColor: "rgba(253, 253, 253, 0.4)",
+	caretColor: "rgb(64, 64, 64)",
+	nilTextColor: "rgb(128, 128, 128)",
+	symbolTextColor: "rgb(32, 32, 32)",
+	sstringTextColor: "rgb(20, 60, 150)",
+	snumTextColor: "rgb(170, 50, 50)",
+	atomFillColor: "rgba(20, 90, 226, 0.2)",
+	listStrokeColors: [
+		"rgb(190, 190, 190)", "rgb(217, 157, 157)", "rgb(231, 215, 142)",
+		"rgb(152, 217, 152)", "rgba(0, 0, 0, 0.0)", "rgb(137, 172, 240)"],
+	listFillColors: [
+		"rgba(125, 125, 125, 0.2)", "rgba(180, 60, 60, 0.2)", "rgba(208, 215, 30, 0.2)",
+		"rgba(50, 180, 50, 0.2)", "rgba(0, 0, 0, 0.06)", "rgba(20, 90, 226, 0.2)"],
+	scrollbarBackgroundColor: "rgba(100, 100, 100, 0.3)",
+	scrollbarColor: "rgba(100, 100, 100, 0.6)",
+	scrollbarActiveColor: "rgba(240, 190, 30, 0.6)"
+};
+defaultPreference.behavior = {
+	"initialize": '(if (local-storage-has-key "openLastSession") (let ((str (local-storage-get-item "openLastSession"))) (begin (local-storage-remove-item "openLastSession") (eval (string->Sexp str)))) (open-hajimeni))',
+
+	"finalize": '(let ((files (map (lambda (i) (let ((tab (get-tab i)) (tn  (tab get-name)) (file (string-append "lastSession" (num->string i) (Sexp->string tn)))) (begin (local-storage-set-item file (SexpView->string (tab get-root-node))) (cons file tn)))) (iota (get-tab-count))))) (local-storage-set-item "openLastSession" (string-append "(begin (map (lambda (file) (new-tab (cdr file) (string->SexpView (local-storage-get-item (car file))))) (quote " (Sexp->string files) ")) (remove-tab (get-tab 0)) (alert \\\"最後のセッションを読み込みました\\\"))")))',
+	
+	"endTextInput": '()', // TextInputが正常終了
+	
+	"keyDown8" : '(begin (let ((ct (get-current-tab)) (sn (ct get-select-node))) (cond ((and (= (ct get-mode) 0) (not (null? "ConsView"))) (begin (ct set-select-node (sn get-prev-atom)) (ct node-remove sn))) ((and (= (ct get-mode) 1) (or (sn instanceof "ConsView") (sn instanceof "NilView")) (not (null? (sn get-parent)))) (begin (ct node-remove ((sn get-parent) car)))) (else ()))) #f)',	// BackSpace
+	
+	"keyDown9" : '(begin (let ((ct (get-current-tab)) (sn (ct get-select-node)) (m (1 - (ct get-mode)))) (begin (ct set-mode m) (cond ((and (= m 1) (not (null? sn)) (not (sn instanceof "ConsView"))) (ct set-select-node (sn get-parent))) ((and (= m 0) (not (null? sn)) (sn instanceof "ConsView")) (ct set-select-node (sn car)))))) #f)',	// Tab
+	
+	"keyDown13": '(begin (let ((ct (get-current-tab)) (sn (ct get-select-node))) (cond ((null? sn) (alert "null")) ((and (= (ct get-mode) 0)) (begin (begin-edit))) ((and (= (ct get-mode) 1)) (begin (ct node-insert sn (new-SymbolView "_")) (begin-edit ((sn get-parent) car)))) (else (alert "else")))) #f)',	// Enter
+	
+	"keyDown32": '(begin (let ((ct (get-current-tab)) (sn (ct get-select-node))) (cond ((null? sn) (alert "null")) ((and (= (ct get-mode) 0) (not (null? (sn get-parent)))) (begin (ct node-insert ((sn get-parent) cdr) (new-SymbolView "_")) (begin-edit (((sn get-parent) cdr) car)))) ((and (= (ct get-mode) 1)) (begin (ct node-insert sn (new-SymbolView "_")) (begin-edit ((sn get-parent) car)))))) #f)',	// Space
+	
+	"keyDownC32": "(begin (command-input-show) #f)",	// CSpace
+	
+	"keyDown37": '(begin (let ((ct (get-current-tab)) (sn (ct get-select-node)) (f (lambda (n) (cond ((null? n) sn) ((n is-display) n) (else (f (n get-prev-atom)))))) (f2 (lambda (n) (cond ((null? n) sn) ((n instanceof "ConsView") n) ((n instanceof "NilView") n) (else (f2 (n get-prev-node))))))) (cond ((null? sn) ()) ((= (ct get-mode) 0) (ct set-select-node (f (sn get-prev-atom)))) ((= (ct get-mode) 1) (ct set-select-node (f2 (sn get-prev-node)))))) #f)',	// Left
+	
+	"keyDown38": '(begin (let ((ct (get-current-tab)) (sn (ct get-select-node))) (unless (null? sn) ((lambda (n) (unless (null? n) (ct set-select-node n))) (sn get-parent-list)))) #f)',	// Up
+	
+	"keyDown39": '(begin (let ((ct (get-current-tab)) (sn (ct get-select-node)) (f (lambda (n) (cond ((null? n) sn) ((n is-display) n) (else (f (n get-next-atom)))))) (f2 (lambda (n) (cond ((null? n) sn) ((n instanceof "ConsView") n) ((n instanceof "NilView") n) (else (f2 (n get-next-node))))))) (cond ((null? sn) ()) ((= (ct get-mode) 0) (ct set-select-node (f (sn get-next-atom)))) ((= (ct get-mode) 1) (ct set-select-node (f2 (sn get-next-node)))))) #f)',	// Right
+	
+	"keyDown40": '(begin (let ((ct (get-current-tab)) (sn (ct get-select-node)) (f (lambda (n) (unless (null? n) (ct set-select-node n))))) (if (sn instanceof "ConsView") (ct set-select-node (sn car)) (f (sn get-next-item)))) #f)',	// Down
+	
+	"keyDown49": '(begin (let ((ct (get-current-tab)) (sn (ct get-select-node))) (when (sn instanceof "ConsView") (sn set-color-type 0))) #f)',	// 1
+	
+	"keyDown50": '(begin (let ((ct (get-current-tab)) (sn (ct get-select-node))) (when (sn instanceof "ConsView") (sn set-color-type 1))) #f)',	// 2
+	
+	"keyDown51": '(begin (let ((ct (get-current-tab)) (sn (ct get-select-node))) (when (sn instanceof "ConsView") (sn set-color-type 2))) #f)', // 3
+	
+	"keyDown52": '(begin (let ((ct (get-current-tab)) (sn (ct get-select-node))) (when (sn instanceof "ConsView") (sn set-color-type 3))) #f)', // 4
+	
+	"keyDown53": '(begin (let ((ct (get-current-tab)) (sn (ct get-select-node))) (when (sn instanceof "ConsView") (sn set-color-type 4))) #f)', // 5
+	
+	"keyDownC65": '(begin (let ((ct (get-current-tab)) (rn (ct get-root-node)) (sn (ct get-select-node))) (if (eq? rn sn) (ct set-select-node ()) (ct set-select-node rn))) #f)',	// CA
+	
+	"keyDown68": '(begin (let ((ct (get-current-tab)) (sn (ct get-select-node))) (when (sn instanceof "ConsView") (sn set-expand (not (sn get-expand))))) #f)',	// D
+	
+	"keyDownC69": "(begin (eval (SexpView->Sexp ((get-current-tab) get-select-node))) #f)",	// CE
+	
+	"keyDownC70": "(begin (let ((ct (get-current-tab)) (sn ((lambda (n) (if (null? n) (ct get-root-node) n)) (ct get-select-node))) (f (lambda (fn n) (cond ((null? n) (f fn (ct get-root-node))) ((eq? n sn) sn) ((equal? n fn) n) (else (f fn (n get-next-atom))))))) (ct set-select-node (f sn (sn get-next-atom)))) #f)",	// CF
+	
+	"keyDown73": '(begin (let ((ct (get-current-tab)) (sn (ct get-select-node))) (when (sn instanceof "ConsView") (ct node-move (sn get-next-item) (sn final-tail)))) #f)',	// I
+	
+	"keyDownS73": "(begin (let ((ct (get-current-tab)) (sn (ct get-select-node))) (unless (null? sn) (let ((on ((sn get-parent-list) get-parent)))  (unless (null? on) (begin (ct node-remove sn) (ct node-insert (on cdr) sn)))))) #f)",	// SI
+	
+	"keyDown75": "(begin (quote 整形) #f)",	// K
+	
+	"keyDown80": "(begin (quote p) #f)",	// P
+	
+	"keyDownS80": "(begin (quote sp) #f)",	// SP
+	
+	"keyDown82": '(begin (let ((sn ((get-current-tab) get-select-node)) (sn (if (not (sn instanceof "ConsView")) (sn get-parent) sn)) (f (lambda (s t) (if (s instanceof "ConsView") (begin (s set-tate t) (f (s cdr) t)) ())))) (f sn (not (sn get-tate)))) #f)',	// R
+	
+	"keyDown84": "(begin (let ((ct (get-current-tab)) (sn (ct get-select-node))) (unless (null? sn) (ct node-fix sn (new-ConsView sn (new-NilView))))) #f)",	// T
+	
+	"keyDownS84": '(begin (let ((ct (get-current-tab)) (sn (ct get-select-node))) (when (and (sn instanceof "ConsView") (eq? ((sn get-parent) car) sn)) (begin (ct node-swap (sn final-tail) ((sn get-parent) cdr)) (ct node-fix (sn get-parent) sn)))) #f)',	// ST
+	
+	"keyDownC84": '(begin (new-tab "new") #f)',	// CT
+	
+	"keyDownC87": '(begin (remove-tab (get-current-tab)) #f)',	// CW
+	
+	"keyDownC90": "(begin ((get-current-tab) undo) #f)",	// CZ
+	
+	"keyDownCS90": "(begin ((get-current-tab) redo) #f)",	// CSZ
+	
+	"keyDown188": '(begin (let ((ct (get-current-tab)) (sn (ct get-select-node))) (when (and (not (null? sn)) ((sn get-parent) instanceof "ConsView") (((sn get-parent) get-parent) instanceof "ConsView")) (ct node-swap sn (((sn get-parent) get-parent) car)))) #f)',	// ,
+	
+	"keyDown190": '(begin (let ((ct (get-current-tab)) (sn (ct get-select-node))) (when (and (not (null? sn)) ((sn get-parent) instanceof "ConsView") (((sn get-parent) cdr) instanceof "ConsView")) (ct node-swap sn (((sn get-parent) cdr) car)))) #f)'	// .
+};
+defaultPreference.symbolTextColor = {
+	"quote": "rgb(100, 100, 255)",
+	"if": "rgb(100, 100, 255)",
+	"set!": "rgb(100, 100, 255)",
+	"define": "rgb(100, 100, 255)",
+	"lambda": "rgb(100, 100, 255)",
+	"and": "rgb(100, 100, 255)",
+	"or": "rgb(100, 100, 255)",
+	"begin": "rgb(100, 100, 255)",
+	"cond": "rgb(100, 100, 255)",
+	"else": "rgb(200, 100, 85)",
+	"when": "rgb(100, 100, 255)",
+	"unless": "rgb(100, 100, 255)",
+	"let": "rgb(100, 100, 255)",
+	"eval": "rgb(100, 100, 255)",
+	"#t": "rgb(200, 100, 85)",
+	"#f": "rgb(200, 100, 85)",
+	"eq?": "rgb(100, 100, 255)",
+	"equal?": "rgb(100, 100, 255)",
+	"pair?": "rgb(100, 100, 255)",
+	"list?": "rgb(100, 100, 255)",
+	"null?": "rgb(100, 100, 255)",
+	"symbol?": "rgb(100, 100, 255)",
+	"string?": "rgb(100, 100, 255)",
+	"int?": "rgb(100, 100, 255)",
+	"+": "rgb(100, 100, 255)",
+	"-": "rgb(100, 100, 255)",
+	"*": "rgb(100, 100, 255)",
+	"/": "rgb(100, 100, 255)",
+	"not": "rgb(100, 100, 255)",
+	"=": "rgb(100, 100, 255)",
+	"<": "rgb(100, 100, 255)",
+	">": "rgb(100, 100, 255)",
+	"<=": "rgb(100, 100, 255)",
+	">=": "rgb(100, 100, 255)",
+	"cons": "rgb(100, 100, 255)",
+	"car": "rgb(100, 100, 255)",
+	"cdr": "rgb(100, 100, 255)",
+	"append": "rgb(100, 100, 255)",
+	"list": "rgb(100, 100, 255)",
+	"assq": "rgb(100, 100, 255)",
+	"assoc": "rgb(100, 100, 255)",
+	"assp": "rgb(100, 100, 255)",
+	"map": "rgb(100, 100, 255)",
+	"iota": "rgb(100, 100, 255)",
+	"take": "rgb(100, 100, 255)",
+	"drop": "rgb(100, 100, 255)",
+	"iota": "rgb(100, 100, 255)",
+	"string-length": "rgb(100, 100, 255)",
+	"string-char-at": "rgb(100, 100, 255)",
+	"string-substring": "rgb(100, 100, 255)",
+	"string-replace": "rgb(100, 100, 255)",
+	"string-append": "rgb(100, 100, 255)",
+	"string->symbol": "rgb(100, 100, 255)",
+	"symbol->string": "rgb(100, 100, 255)",
+	"num->string": "rgb(100, 100, 255)",
+	"string->num": "rgb(100, 100, 255)",
+	"string->Sexp": "rgb(100, 100, 255)",
+	"string->SexpView": "rgb(100, 100, 255)",
+	"Sexp->string": "rgb(100, 100, 255)",
+	"Sexp->SexpView": "rgb(100, 100, 255)",
+	"SexpView->string": "rgb(100, 100, 255)",
+	"SexpView->Sexp": "rgb(100, 100, 255)",
+	"typeof": "rgb(20, 100, 40)",
+	"alert": "rgb(10, 80, 30)",
+	"console-log": "rgb(10, 80, 30)",
+	"canvas-refresh": "rgb(20, 100, 40)",
+	"new-ConsView": "rgb(100, 100, 255)",
+	"new-NilView": "rgb(100, 100, 255)",
+	"new-SymbolView": "rgb(100, 100, 255)",
+	"new-StringView": "rgb(100, 100, 255)",
+	"new-NumView": "rgb(100, 100, 255)",
+	"command-input-show": "rgb(20, 100, 40)",
+	"command-input-hide": "rgb(20, 100, 40)",
+	"begin-edit": "rgb(20, 100, 40)",
+	"get-preference": "rgb(20, 100, 40)",
+	"set-preference": "rgb(20, 100, 40)",
+	"get-default-preference": "rgb(20, 100, 40)",
+	"get-current-tab": "rgb(20, 100, 40)",
+	"set-current-tab": "rgb(20, 100, 40)",
+	"get-tab": "rgb(20, 100, 40)",
+	"new-tab": "rgb(20, 100, 40)",
+	"remove-tab": "rgb(20, 100, 40)",
+	"get-tab-count": "rgb(20, 100, 40)",
+	"preference-reset": "rgb(20, 100, 40)",
+	"control-lock": "rgb(20, 100, 40)",
+	"control-unlock": "rgb(20, 100, 40)",
+	"get-canvas-width": "rgb(20, 100, 40)",
+	"get-canvas-height": "rgb(20, 100, 40)",
+	"local-storage-length": "rgb(20, 100, 40)",
+	"local-storage-key": "rgb(20, 100, 40)",
+	"local-storage-has-key": "rgb(20, 100, 40)",
+	"local-storage-get-item": "rgb(20, 100, 40)",
+	"local-storage-set-item": "rgb(20, 100, 40)",
+	"local-storage-remove-item": "rgb(20, 100, 40)",
+	"local-storage-clear": "rgb(20, 100, 40)",
+	"gdrive-auth": "rgb(20, 100, 40)",
+	"gdrive-init": "rgb(20, 100, 40)",
+	"gdrive-load": "rgb(20, 100, 40)",
+	"gdrive-save": "rgb(20, 100, 40)",
+	"gdrive-files": "rgb(20, 100, 40)",
+	"http-get-text": "rgb(20, 100, 40)",
+	"->string": "rgb(10, 120, 170)",
+	"=": "rgb(10, 120, 170)",
+	"instanceof": "rgb(10, 120, 170)",
+	"->Sexp": "rgb(10, 120, 170)",
+	"get-parent": "rgb(10, 120, 170)",
+	"get-parent-list": "rgb(10, 120, 170)",
+	"get-prev-item": "rgb(10, 120, 170)",
+	"get-next-item": "rgb(10, 120, 170)",
+	"get-prev-atom": "rgb(10, 120, 170)",
+	"get-next-atom": "rgb(10, 120, 170)",
+	"get-prev-node": "rgb(10, 120, 170)",
+	"get-next-node": "rgb(10, 120, 170)",
+	"is-display": "rgb(10, 120, 170)",
+	"get-tate": "rgb(10, 120, 170)",
+	"set-tate": "rgb(10, 120, 170)",
+	"get-expand": "rgb(10, 120, 170)",
+	"set-expand": "rgb(10, 120, 170)",
+	"get-color-type": "rgb(10, 120, 170)",
+	"set-color-type": "rgb(10, 120, 170)",
+	"get-space": "rgb(10, 120, 170)",
+	"set-space": "rgb(10, 120, 170)",
+	"length": "rgb(10, 120, 170)",
+	"nth": "rgb(10, 120, 170)",
+	"last-item": "rgb(10, 120, 170)",
+	"final-tail": "rgb(10, 120, 170)",
+	"get-width": "rgb(10, 120, 170)",
+	"set-width": "rgb(10, 120, 170)",
+	"get-name": "rgb(10, 120, 170)",
+	"set-name": "rgb(10, 120, 170)",
+	"get-root-node": "rgb(10, 120, 170)",
+	"set-root-node": "rgb(10, 120, 170)",
+	"get-select-node": "rgb(10, 120, 170)",
+	"set-select-node": "rgb(10, 120, 170)",
+	"get-mode": "rgb(10, 120, 170)",
+	"set-mode": "rgb(10, 120, 170)",
+	"undo": "rgb(10, 120, 170)",
+	"redo": "rgb(10, 120, 170)",
+	"node-fix": "rgb(10, 120, 170)",
+	"node-insert": "rgb(10, 120, 170)",
+	"node-remove": "rgb(10, 120, 170)",
+	"node-move": "rgb(10, 120, 170)",
+	"node-swap": "rgb(10, 120, 170)",
+	"get-symbol-text-color": "rgb(10, 120, 170)",
+	"set-symbol-text-color": "rgb(10, 120, 170)",
+	"get-behavior": "rgb(10, 120, 170)",
+	"set-behavior": "rgb(10, 120, 170)",
+	"get-font-family": "rgb(10, 120, 170)",
+	"set-font-family": "rgb(10, 120, 170)",
+	"get-font-size": "rgb(10, 120, 170)",
+	"set-font-size": "rgb(10, 120, 170)"
+};
+var preference;
+
+function preferenceReset() {
+	preference = JSON.parse(JSON.stringify(defaultPreference));
+	window.localStorage.setItem("preference", JSON.stringify(preference));
+	console.log("preferenceをリセットしました");
+};
+
+///////////////////////////////////////////////////////////
+
+var footerHeight = 140;
+
+var mouseX = 0; // キャンバスから見た座標
+var mouseY = 0;
+var mouseDragX = 0;
+var mouseDragY = 0;
+
+///////////////////////////////////////////////////////////
+
+// 先頭の空白を削除
+String.prototype.ltrim = function() {
+	return this.replace(/^\s+/, "");
+};
+// 末尾の空白を削除
+String.prototype.rtrim = function() {
+	return this.replace(/\s+$/, "");
+};
+// 先頭および末尾の空白を削除
+String.prototype.trim = function() {
+	return this.replace(/^\s+|\s+$/g, "");
+};
+
+function skipSpace(str) {
+	return str.search(/\S/);
+};
+
+
+//URLパラメータ取得
+function getUrlParameter(key) {
+	var str = location.search.split("?");
+	if (str.length < 2) {
+		return "";
+	}
+	
+	var params = str[1].split("&");
+	for (var i = 0; i < params.length; i++) {
+		var keyVal = params[i].split("=");
+		if (keyVal[0] == key && keyVal.length == 2) {
+			return decodeURIComponent(keyVal[1]);
+		}
+	}
+	return "";
+};
+
+function adjustXY(e) {
+	//var rect = e.target.getBoundingClientRect();
+	var rect = canvas.getBoundingClientRect();
+	mouseX = e.clientX - rect.left;
+	mouseY = e.clientY - rect.top;
+};
+
+
+// JSONP
+var jsonpCallback;
+function jsonp(src, param, callback, failedCallback){
+	var success = false;
+	if(callback != null) {	// コールバックを要求する
+		jsonpCallback = function(j) {
+			callback(j);
+			success = true;
+			//alert("callback");
+		}
+	} else {
+		jsonpCallback = function(j) {
+			success = true;
+			//alert("callback");
+		}
+	}
+	param.callback = "jsonpCallback";
+  var script = document.createElement('script');
+  script.src = src + urlParam(param);
+  script.onload = function() {
+		if(!success && typeof failedCallback == "function") {
+			failedCallback();
+		}
+		//alert("jsonp onload");
+		script.parentNode.removeChild(script);
+  }
+	script.onerror = function() {	//TODO
+		if(typeof failedCallback == "function") {
+			failedCallback();
+		}
+		//alert("jsonp failed");
+		script.parentNode.removeChild(script);
+	}
+  document.body.appendChild(script);
+};
+
+function urlParam(param) {
+	var ret = "?";
+	for(var key in param) {
+		ret += key + "=" + encodeURI(param[key]) + "&";
+	}
+	return ret.substring(0, ret.length - 1);
+};
+
+///////////////////////////////////////////////////////////
+
+function BoolToSexp(b) {
+	if(b) {
+		return scache.t;
+	} else {
+		return scache.f;
+	}
+};
+
+function SexpToBool(s) {
+	return !(s instanceof Symbol && s.value == "#f");
+};
+
+///////////////////////////////////////////////////////////
+
+function LObject() {};
+
+///////////////////////////////////////////////////////////
+
+function Sexp() {
+};
+
+function Cons(car, cdr) {
+	this.car = car;
+	this.cdr = cdr;
+};
+Cons.prototype = new Sexp();
+
+function Nil() {
+};
+Nil.prototype = new Sexp();
+
+function Symbol(value) {
+	this.value = value;
+};
+Symbol.prototype = new Sexp();
+
+function SString(value) {
+	this.value = value;
+};
+SString.prototype = new Sexp();
+
+function SNum(value) {
+	this.value = value;
+};
+SNum.prototype = new Sexp();
+
+///////////////////////////////////////////////////////////
+
+function parseSexp(src) {
+	var pr;
+	pr = parseAll(src);
+	if(pr != null && skipSpace(pr.rest) == -1) {
+		return pr.sexp;
+	}
+	return null;
+};
+function parseAll(src) {
+	src = src.ltrim();
+	switch(src.charAt(0)) {
+	case "\"":
+		return parseString(src);
+	case "(":
+		return parseList(src);
+	default:
+		var pr = parseSNum(src);
+		if(pr != null) {
+			return pr;
+		}
+		return parseSymbol(src);
+	}
+};
+function parseList(src) {
+	var p = skipSpace(src);
+	if(src.charAt(p) != "(") {
+		return null;	// リストじゃないよ
+	}
+	++p;
+	var list = new Array;
+	while(p < src.length) {
+		switch(src.charAt(p)) {
+		case ")":
+			var ret = new Nil();
+			while(0 < list.length) {
+				ret = new Cons(list[list.length - 1], ret);
+				list.pop();
+			}
+			return {sexp: ret, rest: src.substring(p + 1)};
+		case ".":
+			++p;
+			var pr = parseAll(src.substring(p));
+			if(pr == null) {
+				return null;
+			}
+			var ret = pr.sexp;
+			while(0 < list.length) {
+				ret = new Cons(list[list.length - 1], ret);
+				list.pop();
+			}
+			p = skipSpace(pr.rest);
+			if(pr.rest.charAt(p) != ")") {
+				return null;
+			}
+			return {sexp: ret, rest: pr.rest.substring(p + 1)};
+		case " ":
+		case "\n":
+		case "\t":
+			++p;
+			break;
+		default:
+			var pr = parseAll(src.substring(p));
+			if(pr == null) {
+				return null;
+			}
+			list.push(pr.sexp);
+			src = pr.rest;
+			p = 0;
+			break;
+		}
+	}
+	return null;
+};
+function parseSymbol(src) {
+	var sp = skipSpace(src);
+	var p = sp;
+	var c = src.charAt(p);
+	if(["\"", "(", ")"].indexOf(c) != -1) {
+		return null;	// シンボルじゃないよ
+	}
+	while(p < src.length && [" ", "\t", "\n", "(", ")"].indexOf(src.charAt(p)) == -1) {
+		++p;
+	}
+	if(p == sp) {
+		return null;
+	}
+	return {sexp: new Symbol(src.substring(sp, p)), rest: src.substring(p)};
+};
+function parseSNum(src) {
+	var v = src.match(/^\s*[-]?\d+(\.\d+)?/); // float
+	if(v == null) {
+		return null;	// numじゃないよ
+	}
+	var vl = v[0].length;
+	if(vl != src.length && [" ", "\n", "\t", "(", ")"].indexOf(src.charAt(vl)) == -1) {
+		return null; 	// numじゃないよ
+	}
+	return {sexp: new SNum(parseFloat(v[0].substring(0, vl))), rest: src.substring(vl)};
+};
+function parseString(src) {	// parseSNumを先にしないといけない・・・
+	var p = skipSpace(src);
+	if(src.charAt(p) != "\"") {
+		return null;	// 文字列じゃないよ
+	}
+	++p;
+	var value = "";
+	while(p < src.length) {
+		var c = src.charAt(p);
+		++p;
+		switch(c) {
+		case "\\":
+			switch(src.charAt(p)) {
+			case "t":
+				value += "\t";
+				break;
+			case "n":
+				value += "\n";
+				break;
+			case "\\":
+				value += "\\";
+				break;
+			case "\"":
+				value += "\"";
+				break;
+			default:
+				value += src.charAt(p); // んー
+				break;
+			}
+			++p;
+			break;
+		case "\"":
+			return {sexp: new SString(value), rest: src.substring(p)};
+		default:
+			value += c;
+			break;
+		}
+	}
+	return null;
+};
+
+///////////////////////////////////////////////////////////
+
+function SexpView() {
+	this.left = 0;
+	this.top = 0;
+	this.right = 0;
+	this.bottom = 0;
+	this.parent = null;
+};
+
+function ConsView(car, cdr) {
+	this.car = car;
+	this.cdr = cdr;
+	this.tate = preference.consViewTateDefault;
+	this.expand = true;
+	this.color = 0;
+	this.space = 0;
+	if(this.car instanceof SexpView) {
+		this.car.parent = this;
+	}
+	if(this.cdr instanceof SexpView) {
+		this.cdr.parent = this;
+	}
+};
+ConsView.prototype = new SexpView();
+
+function NilView() {
+};
+NilView.prototype = new SexpView();
+
+function SymbolView(value) {
+	this.value = value;
+};
+SymbolView.prototype = new SexpView();
+
+function SStringView(value) {
+	this.value = value;
+	this.escapedValue = this.value.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/\t/g, "\\t").replace(/\"/g, "\\\"");
+	this.newLines = undefined;
+	this.width = undefined;
+};
+SStringView.prototype = new SexpView();
+
+function SNumView(value) {
+	this.value = value;
+};
+SNumView.prototype = new SexpView();
+
+///////////////////////////////////////////////////////////
+
+Sexp.prototype.copy = function() {
+	return this;
+};
+Cons.prototype.copy = function() {
+	return new Cons(this.car.copy(), this.cdr.copy());
+};
+
+Cons.prototype.equal = function(s) {
+	return s instanceof Cons && this.car.equal(s.car) && this.cdr.equal(s.cdr);
+};
+Nil.prototype.equal = function(s) {
+	return s instanceof Nil;
+};
+Symbol.prototype.equal = function(s) {
+	return s instanceof Symbol && this.value == s.value;
+};
+SString.prototype.equal = function(s) {
+	return s instanceof SString && this.value == s.value;
+};
+SNum.prototype.equal = function(s) {
+	return s instanceof SNum && this.value == s.value;
+};
+
+ConsView.prototype.equal = function(s) {
+	return s instanceof ConsView && this.car.equal(s.car) && this.cdr.equal(s.cdr) && this.tate == s.tate && this.expand == s.expand && this.color == s.color && this.space == s.space;
+};
+NilView.prototype.equal = function(s) {
+	return s instanceof NilView;
+};
+SymbolView.prototype.equal = function(s) {
+	return s instanceof SymbolView && this.value == s.value;
+};
+SStringView.prototype.equal = function(s) {
+	return s instanceof SStringView && this.value == s.value;
+};
+SNumView.prototype.equal = function(s) {
+	return s instanceof SNumView && this.value == s.value;
+};
+
+///////////////////////////////////////////////////////////
+
+SexpView.prototype.touchArea = function(x, y) {
+	if(this.left < x && x < this.right && this.top < y && y < this.bottom) {
+		return this;
+	}
+	return null;
+};
+ConsView.prototype.touchArea = function(x, y) {
+	var ret;
+	if(this.expand) {
+		if(this.car instanceof SexpView) {
+			ret = this.car.touchArea(x, y);
+			if(ret != null) {
+				return ret;
+			}
+		}
+		if(this.cdr instanceof SexpView) {
+			ret = this.cdr.touchArea(x, y);
+			if(ret != null) {
+				return ret;
+			}
+		}
+	}
+	if(this.left < x && x < this.right && this.top < y && y < this.bottom) {
+		return this;
+	}
+	return null;
+};
+
+ConsView.prototype.touchSpace = function(x, y) {	// TODO
+	var ret = this.touchArea(x, y);
+	if(!(ret instanceof ConsView)) {
+		if(x < (ret.left + ret.right) / 2) {
+			ret = ret.parent;
+		} else {
+			ret = ret.parent.cdr;
+		}
+	} else if(ret.right - preference.nodePaddingRight <= x) {	// listLast
+		while(ret instanceof ConsView) {
+			ret = ret.cdr;
+		}
+	}
+	return ret;
+};
+
+///////////////////////////////////////////////////////////
+
+SexpView.prototype.drag = function(x, y) {
+	return null;
+};
+SStringView.prototype.drag = function(x, y) {
+	if(x < this.right - 20) {
+		return null;
+	}
+	var ts = this;
+	return function(x, y) {
+		ts.width = x - ts.left;
+		ts.newLines = undefined;
+		needReflow = true;
+		refresh();
+	};
+};
+
+///////////////////////////////////////////////////////////
+
+function jsonToSexpView(j) {
+	var obj = JSON.parse(j);
+	return objectToSexpView(obj);
+};
+function objectToSexpView(o) {
+	switch(o.t) {
+	case "Cons":
+		var ret = new ConsView(objectToSexpView(o.car), objectToSexpView(o.cdr));
+		ret.tate = o.tate;
+		ret.expand = o.expand;
+		ret.color = o.color;
+		ret.space = o.space;
+		return ret;
+	case "Nil":
+		return new NilView();
+	case "Symbol":
+		return new SymbolView(o.v);
+	case "String":
+		return new SStringView(o.v);
+	case "Num":
+		return new SNumView(o.v);
+	}
+};
+
+ConsView.prototype.toObject = function() {
+	var ret = {
+		t: "Cons",
+		car: this.car.toObject(),
+		cdr: this.cdr.toObject(),
+		tate: this.tate,
+		expand: this.expand,
+		color: this.color,
+		space: this.space
+	}
+	return ret;
+}
+NilView.prototype.toObject = function() {
+	return {t: "Nil"};
+}
+SymbolView.prototype.toObject = function() {
+	return {t: "Symbol", v: this.value};
+}
+SStringView.prototype.toObject = function() {
+	return {t: "String", v: this.value};
+}
+SNumView.prototype.toObject = function() {
+	return {t: "Num", v: this.value};
+}
+
+///////////////////////////////////////////////////////////
+
+ConsView.prototype.toString = function() {
+	var ret = "(" + this.car.toString();
+	var sexp = this.cdr;
+	while(sexp instanceof ConsView) {
+		if(sexp.parent.tate) {
+			ret += "\n ";
+		} else {
+			ret += " ";
+		}
+		ret += sexp.car.toString();
+		sexp = sexp.cdr;
+	}
+	if(!(sexp instanceof NilView)) {
+		if(sexp.parent.tate) {
+			ret += " .\n ";
+		} else {
+			ret += " . ";
+		}
+		ret += sexp.toString();
+	}
+	return ret + ")";
+}
+NilView.prototype.toString = function() {
+	return "()";
+}
+SymbolView.prototype.toString = function() {
+	return this.value;
+}
+SStringView.prototype.toString = function() {
+	return "\"" + this.escapedValue + "\""; 
+}
+SNumView.prototype.toString = function() {
+	return String(this.value);
+}
+
+Cons.prototype.toString = function() {
+	var ret = "(" + this.car.toString();
+	var sexp = this.cdr;
+	while(sexp instanceof Cons) {		
+		ret += " ";
+		ret += sexp.car.toString();
+		sexp = sexp.cdr;
+	}
+	if(!(sexp instanceof Nil)) {
+		ret += " . ";
+		ret += sexp.toString();
+	}
+	return ret + ")";
+}
+Nil.prototype.toString = function() {
+	return "()";
+}
+Symbol.prototype.toString = function() {
+	return this.value;
+}
+SString.prototype.toString = function() {
+	return "\"" + this.value.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/\t/g, "\\t").replace(/\"/g, "\\\"") + "\""; 
+}
+SNum.prototype.toString = function() {
+	return String(this.value);
+}
+
+///////////////////////////////////////////////////////////
+
+ConsView.prototype.reflow = function(ctx, x, y) {
+	var np = [x, y];
+	var cs = this;
+	var x_ = x;
+	do {
+		cs.left = x;
+		cs.top = y;
+		if(cs.expand) {
+			var nnp = cs.car.reflow(ctx, x + preference.nodePaddingLeft, y);
+			np[0] = Math.max(np[0], nnp[0]);
+			np[1] = Math.max(np[1], nnp[1]);
+			if(cs.tate) {
+				//y = nnp[1] + preference.nodeInterval + cs.space;// * preference.nodeHeight
+				x = x_;
+				y = np[1] + preference.nodeInterval + cs.space;
+			} else {
+				x = nnp[0] + cs.space;// * preference.nodeHeight
+			}
+		} else {
+			np[0] = Math.max(np[0], x + preference.nodeHeight);	// TODO
+			np[1] = Math.max(np[1], y + preference.nodeHeight);
+			break;
+		}
+		cs = cs.cdr;
+	} while(cs instanceof ConsView);
+
+	if(cs instanceof ConsView) {
+		cs = cs.cdr;
+	} else if(!(cs instanceof NilView)) {
+		var nnp = cs.reflow(ctx, x + preference.nodePaddingLeft, y);
+		np[0] = Math.max(np[0], nnp[0]);
+		np[1] = Math.max(np[1], nnp[1]);
+	}
+
+	do {
+		cs = cs.parent;
+		cs.right = np[0];
+		cs.bottom = np[1];
+	} while(cs != this);
+	
+	np[0] += preference.nodePaddingRight;
+	this.right = np[0];
+
+	return np;
+};
+ConsView.prototype.draw = function(ctx, x, y) {
+	if(this.bottom + y < 0 || ctx.canvas.height - 0 < this.top + y) {
+		return;
+	}
+	ctx.strokeStyle = preference.uiColor.listStrokeColors[this.color];
+
+	if(!(this.parent instanceof ConsView && this.parent.cdr == this)) {
+		ctx.lineWidth = 2;
+		//ctx.strokeRect(x, y, np[0] - x, np[1] - y);
+		ctx.beginPath();
+		ctx.moveTo((this.left + 4 + x) << 0, (this.top + y) << 0);
+		ctx.lineTo((this.left + x) << 0, (this.top + y) << 0);
+		ctx.lineTo((this.left + x) << 0, (this.bottom + y) << 0);
+		ctx.lineTo((this.left + 4 + x) << 0, (this.bottom + y) << 0);
+		ctx.moveTo((this.right - 4 + x) << 0, (this.top + y) << 0);
+		ctx.lineTo((this.right + x) << 0, (this.top + y) << 0);
+		ctx.lineTo((this.right + x) << 0, (this.bottom + y) << 0);
+		ctx.lineTo((this.right - 4 + x) << 0, (this.bottom + y) << 0);
+		ctx.stroke();
+		ctx.closePath();
+	}
+
+	if(this.expand) {
+		this.car.draw(ctx, x, y);
+		if(!(this.cdr instanceof NilView)) {
+			this.cdr.draw(ctx, x, y);
+			if(!(this.cdr instanceof ConsView)) {
+				ctx.strokeStyle = preference.uiColor.listStrokeColors[0];
+				ctx.lineWidth = 2;
+				ctx.beginPath();
+				if(this.tate) {
+					ctx.moveTo(this.left + x, this.cdr.top - 2 + y);
+					ctx.lineTo(this.right + x, this.cdr.top - 2 + y);
+				} else {
+					ctx.moveTo(this.cdr.left - 2 + x, this.top + y);
+					ctx.lineTo(this.cdr.left - 2 + x, this.bottom + y);
+				}
+				ctx.stroke();
+				ctx.closePath();
+			}
+		}
+	} else {
+		//ctx.fillStyle = preference.uiColor.nilTextColor;
+		//ctx.fillText("..", this.left + x + preference.nodePaddingLeft, this.top + preference.textHeight + y);
+	}
+}
+
+NilView.prototype.reflow = function(ctx, x, y) {
+	this.left = x;
+	this.top = y;
+	this.right = x + ctx.measureText("()").width;
+	this.bottom = y + preference.nodeHeight;
+	return [this.right, this.bottom];
+};
+NilView.prototype.draw = function(ctx, x, y) {
+	ctx.fillStyle = preference.uiColor.nilTextColor;
+	ctx.fillText("()", this.left + x, this.top + preference.textHeight + y);
+};
+
+SymbolView.prototype.reflow = function(ctx, x, y) {
+	this.left = x;
+	this.top = y;
+	this.right = x + ctx.measureText(this.value).width;
+	this.bottom = y + preference.nodeHeight;
+	return [this.right, this.bottom];
+};
+SymbolView.prototype.draw = function(ctx, x, y) {
+	var col = preference.symbolTextColor[this.value];
+	if(col == undefined) {
+		ctx.fillStyle = preference.uiColor.symbolTextColor;
+	} else {
+		ctx.fillStyle = col;
+	}
+	ctx.fillText(this.value, this.left + x, this.top + preference.textHeight + y);
+};
+
+SStringView.prototype.reflow = function(ctx, x, y) {
+	this.left = x;
+	this.top = y;
+	if(this.newLines == undefined) {	// newLines算出
+		this.newLines = new Array;
+		if(this.width == undefined) {	// widthが決まってなかったらcanvas.widthの半分に設定
+			this.width = Math.ceil(canvas.width / 2);
+		} else {
+			this.width = Math.max(32, this.width);
+		}
+		// ココらへんもっと最適化したい...
+		var value = "\"" + this.escapedValue + "\"";
+		var maxw = 0;
+
+		var p = 0;
+		while(true) {
+			var v = value.substring(p);
+			var w = ctx.measureText(v).width;
+			//console.log(v);
+			if(w <= this.width) {
+				maxw = Math.max(maxw, w);
+				this.newLines.push(p + v.length);
+				break;
+			}
+
+			var min = 0;
+			var max = v.length;
+			var minw = 0;
+			var koho = ((max * this.width / w) << 0);
+			while(min < max) {
+				w = ctx.measureText(v.substring(min, koho)).width + minw;
+				//console.log(v.substring(min, koho));
+				if(this.width < w) {
+					max = koho;
+					koho = ((koho * this.width / w) << 0);
+				} else {
+					minw = w + ctx.measureText(v.substring(koho, 1)).width;
+					min = koho + 1;
+					koho = (koho + max) / 2;
+				}
+			}
+			min = Math.max(1, min - 1);
+			p += min;
+			w = ctx.measureText(v.substring(0, min)).width;
+			//console.log(v.substring(0, min));
+			maxw = Math.max(w, maxw);
+			this.newLines.push(p);
+		};
+		this.width = maxw;
+	}
+
+	this.right = x + this.width;
+	this.bottom = y + preference.nodeHeight * this.newLines.length;
+	return [this.right, this.bottom];
+};
+SStringView.prototype.draw = function(ctx, x, y) {
+	ctx.fillStyle = preference.uiColor.sstringTextColor;
+	//ctx.fillText("\"" + this.escapedValue + "\"", this.left + x, this.top + textHeight + y);
+	//*
+	var v = "\"" + this.escapedValue + "\"";
+	var dy = this.top + preference.textHeight + y;
+	var p = 0;
+	for(var i = 0, len = this.newLines.length; i < len; ++i) {
+		ctx.fillText(v.substring(p, this.newLines[i]), this.left + x, dy);
+		p = this.newLines[i];
+		dy += preference.nodeHeight;
+	}
+	//*/
+};
+
+SNumView.prototype.reflow = function(ctx, x, y) {
+	this.left = x;
+	this.top = y;
+	this.right = x + ctx.measureText(this.value).width;
+	this.bottom = y + preference.nodeHeight;
+	return [this.right, this.bottom];
+};
+SNumView.prototype.draw = function(ctx, x, y) {
+	ctx.fillStyle = preference.uiColor.snumTextColor;
+	ctx.fillText(this.value, this.left + x, this.top + preference.textHeight + y);
+};
+
+ConsView.prototype.drawSelection = function(ctx, x, y, sel) {
+	if(this.bottom + y < 0 || ctx.canvas.height - 0 < this.top + y) {
+		return;
+	}
+	if(sel == this) {
+		ctx.fillStyle = preference.uiColor.listFillColors[this.color];
+		ctx.fillRect(this.left + x, this.top + y, this.right - this.left, this.bottom - this.top);
+		sel = null;
+	} else if(sel == null && !(this.parent instanceof ConsView && this.parent.cdr == this)) {
+		ctx.fillStyle = preference.uiColor.backgroundColor;
+		ctx.fillRect(this.left + x, this.top + y, this.right - this.left, this.bottom - this.top);
+	}
+
+	if(this.expand) {
+		this.car.drawSelection(ctx, x, y, sel);
+		if(!(this.cdr instanceof NilView)) {
+			this.cdr.drawSelection(ctx, x, y, sel);
+		}
+	}
+};
+NilView.prototype.drawSelection = function(ctx, x, y, sel) {
+	if(sel == this) {
+		ctx.fillStyle = preference.uiColor.atomFillColor;
+		ctx.fillRect(this.left + x, this.top + y, this.right - this.left, this.bottom - this.top);
+	}
+};
+SymbolView.prototype.drawSelection = NilView.prototype.drawSelection;
+SStringView.prototype.drawSelection = NilView.prototype.drawSelection;
+SNumView.prototype.drawSelection = NilView.prototype.drawSelection;
+
+SexpView.prototype.drawCaret = function(ctx, x, y, sel) {
+	if(this.bottom + y < 0 || ctx.canvas.height - 0 < this.top + y) {
+		return;
+	}
+	if(sel == this) {
+		ctx.fillStyle = preference.uiColor.caretColor;
+		var sv = this.parent.car;
+		ctx.fillRect(sv.right + x + 2, sv.top + y - 1, 2, sv.bottom - sv.top + 2);
+	}
+};
+ConsView.prototype.drawCaret = function(ctx, x, y, sel) {
+	if(this.bottom + y < 0 || ctx.canvas.height - 0 < this.top + y) {
+		return;
+	}
+	if(sel == this) {
+		ctx.fillStyle = preference.uiColor.caretColor;
+		ctx.fillRect(this.car.left + x - 4, this.car.top + y - 1, 2, this.car.bottom - this.car.top + 2);
+		return;
+	}
+
+	if(this.expand) {
+		this.car.drawCaret(ctx, x, y, sel);
+		if(!(this.cdr instanceof NilView)) {
+			this.cdr.drawCaret(ctx, x, y, sel);
+		}
+	}
+};
+NilView.prototype.drawCaret = function(ctx, x, y, sel) {
+	if(this.parent == null) {
+		return;
+	}
+	if(sel == this) {
+		if(this.parent.cdr == this) {
+			ctx.fillStyle = preference.uiColor.caretColor;
+			var sv = this.parent.car;
+			ctx.fillRect(sv.right + x + 2, sv.top + y - 1, 2, sv.bottom - sv.top + 2);
+		}
+	}
+};
+
+///////////////////////////////////////////////////////////
+
+Cons.prototype.nth = function(i) {
+	if(i == 0) {
+		return this.car;
+	} else {
+		return this.cdr.nth(i - 1);
+	}
+};
+
+ConsView.prototype.nth = function(i) {
+	if(i == 0) {
+		return this.car;
+	} else {
+		return this.cdr.nth(i - 1);
+	}
+};
+
+SexpView.prototype.nextAtom = function() {
+	var node = this;
+	while(node.parent != null) {
+		if(node.parent.car == node) {
+			node = node.parent.cdr;
+			break;
+		}
+		node = node.parent;
+		if(node.parent == null) {
+			return null;
+		}
+	}
+	while(node instanceof ConsView) {
+		node = node.car;
+	}
+	return node;
+};
+SexpView.prototype.prevAtom = function() {
+	var node = this;
+	while(node.parent != null) {
+		if(node.parent.cdr == node) {
+			node = node.parent.car;
+			break;
+		}
+		node = node.parent;
+		if(node.parent == null) {
+			return null;
+		}
+	}
+	while(node instanceof ConsView) {
+		node = node.cdr;
+	}
+	return node;
+};
+
+SexpView.prototype.nextNode = function() {
+	var node = this;
+	while(node.parent != null) {
+		if(node.parent.car == node) {
+			return node.parent.cdr;
+		}
+		node = node.parent;
+	}
+	return null;
+};
+ConsView.prototype.nextNode = function() {
+	return this.car;
+};
+
+SexpView.prototype.prevNode = function() {
+	if(this.parent == null) {
+		return null;
+	} else if(this.parent.car == this) {
+		return this.parent;
+	}
+	return this.prevAtom();
+};
+
+SexpView.prototype.isDisplay = function() {
+	return true;
+};
+NilView.prototype.isDisplay = function() {
+	return this.parent == null || this.parent.car == this;
+};
+/*
+
+SexpView.prototype.listHead = function() {
+	if(this.parent instanceof ConsView) {
+		return this.parent.listHead();
+	}
+	return null;
+};
+ConsView.prototype.listHead = function() {
+	if(this.parent instanceof ConsView && this.parent.cdr == this) {
+		return this.parent.listHead();
+	}
+	return this;
+};
+ConsView.prototype.listLast = function() {
+	if(this.cdr instanceof ConsView) {
+		return this.cdr.listLast();
+	}
+	return this.cdr;
+};
+ConsView.prototype.lastElement = function() {
+	if(this.cdr instanceof ConsView) {
+		var ret = this.cdr.lastElement();
+		if(ret != null) {
+			return ret;
+		}
+	} else if(!(this.cdr instanceof Nil)) {
+		return this.cdr;
+	}
+	if(this.car instanceof Cons) {
+		return this.car.lastElement();
+	} else if(!(this.car instanceof Nil)) {
+		return this.car;
+	}
+	return null;
+};
+SexpView.prototype.outOfList = function() {
+	if(this.parent == null) {
+		return null
+	}
+	var s = this.parent;
+	while(s.parent != null && s.parent.cdr == s) {
+		s = s.parent;
+	}
+	if(this.parent == null) {
+		return null
+	}
+	return s.parent;
+};
+ConsView.prototype.toArray = function() {
+	var ret = new Array;
+	var s = this;
+	while(s instanceof ConsView) {
+		ret.push(s.car);
+		s = s.cdr;
+	}
+	return ret;
+};
+
+SexpView.prototype.applyAllNodes = function(f) {
+	f(this);
+};
+ConsView.prototype.applyAllNodes = function(f) {
+	f(this);
+	this.car.applyAllNodes(f);
+	this.cdr.applyAllNodes(f);
+};
+ConsView.prototype.applyAllNodesInList = function(f) {
+	f(this.car);
+	if(this.cdr instanceof ConsView) {
+		this.cdr.applyAllNodesInList(f);	
+	}
+};
+*/
+
+///////////////////////////////////////////////////////////
+
+ConsView.prototype.displayTate = function(t) {
+	this.tate = t;
+	if(this.cdr instanceof ConsView) {
+		this.cdr.displayTate(t);
+	}
+};
+
+ConsView.prototype.setListColor = function(c) {
+	this.color = c;
+	if(this.cdr instanceof ConsView) {
+		this.cdr.setListColor(c);
+	}
+};
+
+///////////////////////////////////////////////////////////
+
+ConsView.prototype.copy = function() {
+	var ret = new ConsView(this.car.copy(), this.cdr.copy());
+	ret.tate = this.tate;
+	ret.expand = this.expand;
+	ret.color = this.color;
+	return ret;
+};
+NilView.prototype.copy = function() {
+	return new NilView();
+};
+SymbolView.prototype.copy = function() {
+	return new SymbolView(this.value);
+};
+SStringView.prototype.copy = function() {
+	return new SStringView(this.value);
+};
+SNumView.prototype.copy = function() {
+	return new SNumView(this.value);
+};
+
+Cons.prototype.toView = function() {
+	return new ConsView(this.car.toView(), this.cdr.toView());
+};
+Nil.prototype.toView = function() {
+	return new NilView();
+};
+Symbol.prototype.toView = function() {
+	return new SymbolView(this.value);
+};
+SString.prototype.toView = function() {
+	return new SStringView(this.value);
+};
+SNum.prototype.toView = function() {
+	return new SNumView(this.value);
+};
+
+ConsView.prototype.toSexp = function() {
+	return new Cons(this.car.toSexp(), this.cdr.toSexp());
+};
+NilView.prototype.toSexp = function() {
+	return new Nil();
+};
+SymbolView.prototype.toSexp = function() {
+	return new Symbol(this.value);
+};
+SStringView.prototype.toSexp = function() {
+	return new SString(this.value);
+};
+SNumView.prototype.toSexp = function() {
+	return new SNum(this.value);
+};
+
+///////////////////////////////////////////////////////////
+
+function arrayToList(a) {
+	var ret = new Nil();
+	for(var i = a.length - 1; 0 <= i; --i) {
+		ret = new Cons(a[i], ret);
+	}
+	return ret;
+};
+
+
+ConsView.prototype.countAtom = function(ac) {
+	this.car.countAtom(ac);
+	this.cdr.countAtom(ac);
+};
+NilView.prototype.countAtom = function(ac) {
+};
+SymbolView.prototype.countAtom = function(ac) {
+	if(this.value in ac) {
+		++ac[this.value];
+	} else {
+		ac[this.value] = 1;
+	}
+};
+SStringView.prototype.countAtom = function(ac) {
+	if(this.value in ac) {
+		++ac[this.value];
+	} else {
+		ac[this.value] = 1;
+	}
+};
+SNumView.prototype.countAtom = function(ac) {
+	if(this.value in ac) {
+		++ac[this.value];
+	} else {
+		ac[this.value] = 1;
+	}
+};
+
+function subtractAtomCount(ac0, ac1) {
+	for(var key in ac1) {
+		ac0[key] -= ac1[key];
+	}
+}
+
+///////////////////////////////////////////////////////////
+
+// v0をv1で置き換える (リストの要素じゃなくてもいい)
+function OperationFix(v0, v1) {
+	this.v0 = v0;
+	this.v1 = v1;
+};
+OperationFix.prototype.execute = function(buf) {
+	if(this.v0 == buf.rootNode) {
+		buf.rootNode = this.v1;	// v1のparentはnullじゃないとだめ
+		this.v1.parent = null;
+	} else {
+		if(this.v0.parent.car == this.v0) {	// carの
+			this.v0.parent.car = this.v1;
+		} else {	// cdrの
+			this.v0.parent.cdr = this.v1;
+		}
+		this.v1.parent = this.v0.parent;
+	}
+	if(buf.selectNode == this.v0) {
+		buf.selectNode = this.v1;
+	}
+
+	var ac = new Object();
+	this.v0.countAtom(ac);
+	subtractAtomCount(buf.atomCount, ac);
+	this.v1.countAtom(buf.atomCount);
+};
+OperationFix.prototype.undo = function(buf) {
+	if(this.v1 == buf.rootNode) {
+		buf.rootNode = this.v0;
+		this.v0.parent = null;
+	} else {
+		if(this.v1.parent.car == this.v1) {
+			this.v1.parent.car = this.v0;
+		} else {
+			this.v1.parent.cdr = this.v0;
+		}
+		this.v0.parent = this.v1.parent;
+	}
+	if(buf.selectNode == this.v1) {
+		buf.selectNode = this.v0;
+	}
+
+	var ac = new Object();
+	this.v1.countAtom(ac);
+	subtractAtomCount(buf.atomCount, ac);
+	this.v0.countAtom(buf.atomCount);
+};
+OperationFix.create = function(v0, v1) {
+	return new OperationFix(v0, v1);
+};
+
+// vを削除する (リストの要素のparent)
+function OperationRemove(v) {
+	this.v = v;
+};
+OperationRemove.prototype.execute = function(buf) {
+	var v = this.v;
+	if(v.parent == null) {
+		v.cdr.parent = null;
+		buf.rootNode = v.cdr;
+	} else {
+		v.cdr.parent = v.parent;
+		if(v.parent.cdr == v) {
+			v.parent.cdr = v.cdr;
+		} else {
+			v.parent.car = v.cdr;
+		}
+	}
+	if(buf.selectNode == v) {
+		buf.selectNode = null;
+	}
+
+	var ac = new Object();
+	v.car.countAtom(ac);
+	subtractAtomCount(buf.atomCount, ac);
+};
+OperationRemove.prototype.undo = function(buf) {
+	var v = this.v;
+	if(v.parent == null) {
+		v.cdr.parent = v;
+		buf.rootNode = v;
+	} else {
+		v.cdr.parent = v;
+		if(v.parent.cdr == v.cdr) {
+			v.parent.cdr = v;
+		} else {
+			v.parent.car = v;
+		}
+	}
+	buf.selectNode = v.car;
+
+	v.car.countAtom(buf.atomCount);
+};
+OperationRemove.create = function(v) {	// ここはリストの要素のparentじゃなくていい
+	if(v.parent == null || v.parent.car != v) {
+		return null;
+	}
+	return new OperationRemove(v.parent);	// 注意
+};
+
+// v0の前にv1を挿入する (v0はリストの要素のparent, v1はなんでもいい)
+function OperationInsert(v0, v1) {
+	this.v0 = v0;
+	this.v1 = v1;
+};
+OperationInsert.prototype.execute = function(buf) {
+	var p = this.v0.parent;
+	var ncv = new ConsView(this.v1, this.v0);
+	// 継承 TODO
+	ncv.tate = this.v0.tate;
+	ncv.color = this.v0.color;
+
+	if(p == null) {
+		buf.rootNode = ncv;
+	} else {
+		if(p.cdr == this.v0) {
+			p.cdr = ncv;
+		} else {
+			p.car = ncv;
+		}
+		ncv.parent = p;
+	}
+	this.v1.parent = ncv;
+	this.v0.parent = ncv;
+
+	this.v1.countAtom(buf.atomCount);
+};
+OperationInsert.prototype.undo = function(buf) {
+	var p = this.v0.parent.parent;
+	if(p == null) {
+		buf.rootNode = this.v0;
+		this.v0.parent = null;
+	} else {
+		if(p.cdr == this.v0.parent) {
+			p.cdr = this.v0;
+		} else {
+			p.car = this.v0;
+		}
+		this.v0.parent = p;
+	}
+	if(buf.selectNode == this.v0.parent) {
+		buf.selectNode = null;
+	}
+
+	var ac = new Object();
+	this.v1.countAtom(ac);
+	subtractAtomCount(buf.atomCount, ac);
+};
+OperationInsert.create = function(v0, v1) {
+	//if(!(v0 instanceof ConsView) && !(v0 instanceof NilView))
+	//	return null;
+	return new OperationInsert(v0, v1);
+};
+
+// v0をリストから削除してv1の前に挿入する (v0もv1もリストの要素のparent)
+function OperationMove(v0, v1) {
+	this.v0 = v0;
+	this.v1 = v1;
+};
+OperationMove.prototype.execute = function(buf) {
+	var v = this.v0;
+	var v2 = v.cdr;
+	if(v.parent == null) {
+		v.cdr.parent = null;
+		buf.rootNode = v.cdr;
+	} else {
+		v.cdr.parent = v.parent;
+		if(v.parent.cdr == v) {
+			v.parent.cdr = v.cdr;
+		} else {
+			v.parent.car = v.cdr;
+		}
+	}
+	v.cdr = this.v1;
+
+	// 継承 TODO
+	//v.tate = this.v1.tate;
+	//v.color = this.v1.color;
+
+	var p = this.v1.parent;
+	if(p == null) {
+		buf.rootNode = v;
+		v.parent = null;
+	} else {
+		if(p.cdr == this.v1) {
+			p.cdr = v;
+		} else {
+			p.car = v;
+		}
+		v.parent = p;
+	}
+	this.v1.parent = v;
+	this.v1 = v2;
+};
+OperationMove.prototype.undo = function(buf) {
+	var v = this.v0;
+	var v2 = v.cdr;
+	if(v.parent == null) {
+		v.cdr.parent = null;
+		buf.rootNode = v.cdr;
+	} else {
+		v.cdr.parent = v.parent;
+		if(v.parent.cdr == v) {
+			v.parent.cdr = v.cdr;
+		} else {
+			v.parent.car = v.cdr;
+		}
+	}
+	v.cdr = this.v1;
+
+	// 継承 TODO
+	//v.tate = this.v1.tate;
+	//v.color = this.v1.color;
+
+	var p = this.v1.parent;
+	if(p == null) {
+		buf.rootNode = v;
+		v.parent = null;
+	} else {
+		if(p.cdr == this.v1) {
+			p.cdr = v;
+		} else {
+			p.car = v;
+		}
+		v.parent = p;
+	}
+	this.v1.parent = v;
+	this.v1 = v2;
+};
+OperationMove.create = function(v0, v1) {
+	if(v0.parent == null || v0.parent.car != v0) {
+		return null;
+	}
+	return new OperationMove(v0.parent, v1);
+};
+
+// v0とv1を入れ替える
+function OperationSwap(v0, v1) {
+	this.v0 = v0;
+	this.v1 = v1;
+};
+OperationSwap.prototype.execute = function(buf) {
+	var p = this.v0.parent;
+	this.v0.parent = this.v1.parent;
+	if(this.v0 == buf.rootNode) {
+		buf.rootNode = this.v1;	// v1のparentはnullじゃないとだめ
+		if(p.car == this.v0) {
+			p.car = this.v1;
+		} else {
+			p.cdr = this.v1;
+		}
+		this.v1.parent = null;
+	} else {
+		if(p.car == this.v0) {	// carの
+			p.car = this.v1;
+		} else {	// cdrの
+			p.cdr = this.v1;
+		}
+		if(this.v1 == buf.rootNode) {
+			buf.rootNode = this.v0;
+		} else if(this.v1.parent.car == this.v1) {
+			this.v1.parent.car = this.v0;
+		} else {
+			this.v1.parent.cdr = this.v0;
+		}
+		this.v1.parent = p;
+	}
+};
+OperationSwap.prototype.undo = function(buf) {
+	this.execute(buf);
+};
+OperationSwap.create = function(v0, v1) {
+	return new OperationSwap(v0, v1);
+};
+
+///////////////////////////////////////////////////////////
+
+function Tab(name, sv) {
+	this.name = name;
+	
+	this.rootNode = sv;
+	this.selectNode = null;
+	
+	this.atomCount = new Object();
+	this.rootNode.countAtom(this.atomCount);
+
+	this.operationStack = new Array();
+	this.lastOperationIndex = 0;
+
+	// 0	上書きモード, 1	挿入モード
+	this.mode = 0;
+
+	this.scrollX = 0;
+	this.scrollY = 0;
+
+	this.tabLabelElement = null;
+
+	// this.isDirty TODO
+};
+Tab.prototype.doOperation = function(op) {
+	var os = this.operationStack;
+	var loi = this.lastOperationIndex;
+	if(loi < os.length) {
+		os.splice(loi);
+	}
+	if(preference.operationStackMax <= loi) {	// ん？ 
+		os.shift();
+	} else {
+		++this.lastOperationIndex;
+	}
+	os.push(op);
+	op.execute(this);
+	needReflow = true;
+	//console.log("do");
+};
+Tab.prototype.undoOperation = function() {
+	if(this.lastOperationIndex == 0) {
+		return;
+	}
+	var os = this.operationStack;
+	--this.lastOperationIndex;
+	os[this.lastOperationIndex].undo(this);
+	needReflow = true;
+	//console.log("undo");
+};
+Tab.prototype.redoOperation = function() {
+	var os = this.operationStack;
+	if(os.length <= this.lastOperationIndex) {
+		return;
+	}
+	os[this.lastOperationIndex++].execute(this);
+	needReflow = true;
+	//console.log("redo");
+};
+
+///////////////////////////////////////////////////////////
+
+function objectToSexp(obj) {
+	switch(typeof obj) {
+	case "object":
+		var ret = new Nil();
+		for(var key in obj) {
+			var s = objectToSexp(obj[key]);
+			if(s != null) {
+				var ks = new SString(key);
+				ret = new Cons(new Cons(ks, s), ret);
+			}
+		}
+		return ret;
+	case "string":
+		return new SString(obj);
+	case "number":
+		return new SNum(obj);
+	case "boolean":
+		return new Symbol(obj ? "#t" : "#f");
+	default:
+		return new Symbol(typeof obj);
+	}
+};
+
+///////////////////////////////////////////////////////////
+
+var controlLock = 1;
+
+var editingNode = null;
+
+var needReflow = true;
+
+var dragMode = -1;
+var drag = null;
+
+var scrollBarXIsActive = false;
+var scrollBarYIsActive = false;
+
+var clipboard = null;
+
+var keyGuard = -1;	// Returnのときうまいことつかう
+
+var currentTab = null;
+
+
+function reflow() {
+	if(!canvas.getContext || currentTab == null) {
+		return;
+	}
+	var ctx = canvas.getContext('2d');
+	ctx.font = preference.fontSize + "pt " + preference.fontFamily;
+	currentTab.rootNode.reflow(ctx, 6, 6); // MN
+	needReflow = false;
+}
+
+function refresh() {
+	if(!canvas.getContext || currentTab == null) {
+		return;
+	}
+	if(needReflow) {
+		reflow();
+	}
+
+	var rn = currentTab.rootNode;
+	var scrollX = currentTab.scrollX;
+	var scrollY = currentTab.scrollY;
+
+	var ctx = canvas.getContext('2d');
+	ctx.font = preference.fontSize + "pt " + preference.fontFamily;
+	ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+	
+	if(currentTab.mode == 0) {
+		if(currentTab.selectNode != null) {
+			currentTab.selectNode.drawSelection(ctx, -scrollX, -scrollY, currentTab.selectNode);
+		}
+		rn.draw(ctx, -scrollX, -scrollY);
+	} else {
+		rn.draw(ctx, -scrollX, -scrollY);
+		if(currentTab.selectNode != null) {
+			currentTab.selectNode.drawCaret(ctx, -scrollX, -scrollY, currentTab.selectNode);
+		}
+	}
+
+	// scroll bar
+	var sbs = scrollBarSize(canvas.height - 16, canvas.height, rn.bottom + canvas.height);
+	var sbp = scrollBarPosition(canvas.height - 16, rn.bottom + canvas.height, scrollY);
+	ctx.fillStyle = preference.uiColor.scrollbarBackgroundColor;
+	ctx.fillRect(canvas.width - 16, 0, 12, canvas.height - 16);
+	ctx.fillStyle = !scrollBarYIsActive ? preference.uiColor.scrollbarColor : preference.uiColor.scrollbarActiveColor;
+	ctx.fillRect(canvas.width - 16, sbp, 12, sbs);
+
+	sbs = scrollBarSize(canvas.width - 16, canvas.width, rn.right + canvas.width);
+	sbp = scrollBarPosition(canvas.width - 16, rn.right + canvas.width, scrollX);
+	ctx.fillStyle = preference.uiColor.scrollbarBackgroundColor;
+	ctx.fillRect(0, canvas.height - 16, canvas.width - 16, 12);
+	ctx.fillStyle = !scrollBarXIsActive ? preference.uiColor.scrollbarColor : preference.uiColor.scrollbarActiveColor;
+	ctx.fillRect(sbp, canvas.height - 16, sbs, 12);
+
+	if(editingNode != null) {
+		ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+		ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+	}
+};
+
+function beginEdit(sv) {
+	if(!(sv instanceof SexpView)) {
+		return;
+	}
+	++controlLock;
+
+	reflow();
+	focusFitToCanvas();
+	editingNode = sv;
+
+	var rect = canvas.getBoundingClientRect();
+	var ti = document.getElementById("textInput");
+	ti.style.left = (editingNode.left + rect.left - currentTab.scrollX) + "px";
+	ti.style.top = (editingNode.top + rect.top - 2 - currentTab.scrollY) + "px";
+	ti.innerHTML = editingNode.toString().replace(/\n/g, "<br>");
+	ti.style.display = "block";
+	ti.focus();
+	window.getSelection().selectAllChildren(ti);
+	
+	refresh();
+};
+
+function beginCommandInput() {
+	++controlLock;
+
+	editingNode = null;
+	var ti = document.getElementById("textInput");
+	ti.style.left = "100px";
+	ti.style.top = "100px";
+	ti.innerHTML = "";
+	ti.style.display = "block";
+	ti.focus();
+	window.getSelection().selectAllChildren(ti);
+	
+	refresh();
+};
+
+///////////////////////////////////////////////////////////
+
+function clipScrollX(x) {
+	if(x < 0) {
+		return 0;
+	} else if(currentTab.rootNode.right < x) {
+		return currentTab.rootNode.right;
+	}
+	return x;
+};
+function clipScrollY(y) {
+	if(y < 0) {
+		return 0;
+	} else if(currentTab.rootNode.bottom < y) {
+		return currentTab.rootNode.bottom;
+	}
+	return y;
+};
+
+function scrollBarSize(sbm, shw, cvs) {
+	return shw * sbm / cvs;
+};
+function scrollBarPosition(sbm, cvs, scr) {
+	return scr * sbm / cvs;
+};
+
+function focusFitToCanvas() {
+	var sn = currentTab.selectNode;
+	if(sn != null && sn.left != 0 && sn.right != 0) {	// TODO
+		if(sn.bottom - sn.top < canvas.height) {
+			if(sn.top - currentTab.scrollY < 6) {
+				currentTab.scrollY = sn.top - 6;
+			} else if(canvas.height - 6 < sn.bottom - currentTab.scrollY) {
+				currentTab.scrollY = sn.bottom - canvas.height + 6;
+			}
+		}
+		if(sn.right - sn.left < canvas.width) {
+			if(sn.left - currentTab.scrollX < 6) {
+				currentTab.scrollX = sn.left - 6;
+			} else if(canvas.width - 6 < sn.right - currentTab.scrollX) {
+				currentTab.scrollX = sn.right - canvas.width + 6;
+			}
+		}
+	}
+};
+
+///////////////////////////////////////////////////////////
+
+canvas.onclick = function(e) {
+	if(dragMode != -1 || controlLock != 0) {
+		return;
+	}
+	adjustXY(e);
+	var t;
+	if(e.ctrlKey) {
+		t = currentTab.rootNode.touchArea(mouseX + currentTab.scrollX, mouseY + currentTab.scrollY);
+		if(t instanceof SymbolView) {
+			var s = t.value.search(/^(http|ftp):\/\/.+$/);
+			if(s == 0) {
+				window.open(t.value);
+			}
+		}
+	}
+	if(currentTab.mode == 0) {
+		t = currentTab.rootNode.touchArea(mouseX + currentTab.scrollX, mouseY + currentTab.scrollY);
+		while(t instanceof ConsView && t.parent != null && t.parent.cdr == t) {
+			t = t.parent;
+		}
+	} else {
+		t = currentTab.rootNode.touchSpace(mouseX + currentTab.scrollX, mouseY + currentTab.scrollY);
+	}
+	if(currentTab.selectNode != t) {
+		currentTab.selectNode = t;
+		focusFitToCanvas();
+		refresh();
+	}
+};
+
+canvas.onmousedown = function(e) {
+	if(controlLock != 0) {
+		return;
+	}
+	adjustXY(e);
+	var rn = currentTab.rootNode;
+	var sn = currentTab.selectNode;
+	if(e.button == 0) {	// 左クリック
+		if(canvas.width - 16 < mouseX) {	// 縦スクロール
+			dragMode = 0;
+			scrollBarYIsActive = true;
+			var sbs = scrollBarSize(canvas.height - 16, canvas.height, rn.bottom + canvas.height);
+			var sbp = scrollBarPosition(canvas.height - 16, rn.bottom + canvas.height, currentTab.scrollY);
+			if(!(sbp < mouseY && mouseY < sbp + sbs)) {
+				currentTab.scrollY = clipScrollY((mouseY - sbs / 2) * (rn.bottom + canvas.height) / (canvas.height - 16));
+				refresh();
+				sbp = scrollBarPosition(canvas.height - 16, rn.bottom + canvas.height, currentTab.scrollY);
+			}
+			mouseDragY = mouseY - sbp;
+			return false;
+		} else if(canvas.height - 16 < mouseY) {	// 横スクロール
+			dragMode = 1;
+			scrollBarXIsActive = true;
+			var sbs = scrollBarSize(canvas.width - 16, canvas.width, rn.right + canvas.width);
+			var sbp = scrollBarPosition(canvas.width - 16, rn.right + canvas.width, currentTab.scrollX);
+			if(!(sbp < mouseX && mouseX < sbp + sbs)) {
+				currentTab.scrollX = clipScrollX((mouseX - sbs / 2) * (rn.right + canvas.width) / (canvas.width - 16));
+				refresh();
+				sbp = scrollBarPosition(canvas.width - 16, rn.right + canvas.width, currentTab.scrollX);
+			}
+			mouseDragX = mouseX - sbp;
+			return false;
+		} else {	// 
+			var t = rn.touchArea(mouseX + currentTab.scrollX, mouseY + currentTab.scrollY);
+			if(t != null && t == sn) {
+				drag = t.drag(mouseX + currentTab.scrollX, mouseY + currentTab.scrollY);
+				if(drag != null) {
+					dragMode = 3;
+					return false;
+				}
+			}
+		}
+	} else if(e.button == 1) {	// 中釦？
+		dragMode = 2;
+		scrollBarYIsActive = true;
+		scrollBarXIsActive = true;
+		
+		/*var sbs = scrollBarSize(canvas.height - 16, canvas.height, rn.bottom + canvas.height);
+		currentTab.scrollY = clipScrollY((mouseY - sbs / 2) * (rn.bottom + canvas.height) / (canvas.height - 16));
+		var sbp = scrollBarPosition(canvas.height - 16, rn.bottom + canvas.height, currentTab.scrollY);
+		mouseDragY = mouseY - sbp;
+
+		sbs = scrollBarSize(canvas.width - 16, canvas.width, rn.right + canvas.width);
+		currentTab.scrollX = clipScrollX((mouseX - sbs / 2) * (rn.right + canvas.width) / (canvas.width - 16));
+		sbp = scrollBarPosition(canvas.width - 16, rn.right + canvas.width, currentTab.scrollX);
+		mouseDragX = mouseX - sbp;
+		*/
+		mouseDragX = mouseX + currentTab.scrollX;
+		mouseDragY = mouseY + currentTab.scrollY;
+		refresh();
+		return false;
+	}
+	dragMode = -1;
+};
+
+document.onmousemove = function(e) {
+	if(dragMode < 0) {
+		return;
+	}
+	adjustXY(e);
+	var rn = currentTab.rootNode;
+	switch(dragMode) {
+	case 0:
+		var scrollY_ = (mouseY - mouseDragY) * (rn.bottom + canvas.height) / (canvas.height - 16);
+		scrollY_ = clipScrollY(scrollY_);
+		if(currentTab.scrollY != scrollY_) {
+			currentTab.scrollY = scrollY_;
+			refresh();
+		}
+		break;
+	case 1:
+		var scrollX_ = (mouseX - mouseDragX) * (rn.right + canvas.width) / (canvas.width - 16);
+		scrollX_ = clipScrollX(scrollX_);
+		if(currentTab.scrollX != scrollX_) {
+			currentTab.scrollX = scrollX_;
+			refresh();
+		}
+		break;
+	case 2:
+		/*
+		var scrollY_ = (mouseY - mouseDragY) * (rn.bottom + canvas.height) / (canvas.height - 16);
+		var scrollX_ = (mouseX - mouseDragX) * (rn.right + canvas.width) / (canvas.width - 16);
+		scrollY_ = clipScrollY(scrollY_);
+		scrollX_ = clipScrollX(scrollX_);
+		if(currentTab.scrollY != scrollY_ || currentTab.scrollX != scrollX_) {
+			currentTab.scrollY = scrollY_;
+			currentTab.scrollX = scrollX_;
+			refresh();
+		}
+		*/
+		currentTab.scrollX = clipScrollX(- mouseX + mouseDragX);
+		currentTab.scrollY = clipScrollY(- mouseY + mouseDragY);
+		refresh();
+		break;
+	case 3:
+		drag(mouseX + currentTab.scrollX, mouseY + currentTab.scrollY);
+		break;
+	case 4:
+		var ci = document.getElementById("commandInputFrame");
+		ci.style.left = (mouseX - mouseDragX) + "px";
+		ci.style.top = (mouseY - mouseDragY) + "px";
+		break;
+	}
+};
+
+document.onmouseup = function(e) {
+	if(0 <= dragMode) {
+		dragMode = -2;
+		scrollBarYIsActive = false;
+		scrollBarXIsActive = false;
+		refresh();
+	}
+	if(drag != null) {
+		drag = null;
+	}
+};
+
+canvas.ondblclick = function(e) {
+	if(controlLock != 0 || currentTab.selectNode == null) {
+		return;
+	}
+	if(currentTab.selectNode instanceof ConsView && !currentTab.selectNode.expand) {
+		currentTab.selectNode.expand = true;
+		reflow();
+		refresh();
+	} else {
+		beginEdit(currentTab.selectNode);
+	}
+};
+
+if(document.body.addEventListener) {
+	document.body.addEventListener("mousewheel" , function(e) {
+		if(controlLock != 0) {
+			return;
+		}
+		var scrollY_ = clipScrollY(currentTab.scrollY - preference.scrollAmount * e.wheelDeltaY / 120);
+		var scrollX_ = clipScrollX(currentTab.scrollX - preference.scrollAmount * e.wheelDeltaX / 120);
+		if(scrollY_ != currentTab.scrollY || scrollX_ != currentTab.scrollX) {
+			currentTab.scrollY = scrollY_;
+			currentTab.scrollX = scrollX_;
+			refresh();
+			return false;
+		}
+		return true;
+	});
+	document.body.addEventListener("DOMMouseScroll" , function(e) {	// Firefox用
+		if(controlLock != 0) {
+			return;
+		}
+		if(e.axis == e.VERTICAL_AXIS) {
+			var scrollY_ = clipScrollY(currentTab.scrollY + preference.scrollAmount * e.detail / 3);
+			if(scrollY_ != currentTab.scrollY) {
+				currentTab.scrollY = scrollY_;
+				refresh();
+				return false;
+			}
+		} else {
+			var scrollX_ = clipScrollX(currentTab.scrollX + preference.scrollAmount * e.detail / 3);
+			if(scrollX_ != currentTab.scrollX) {
+				currentTab.scrollX = scrollX_;
+				refresh();
+				return false;
+			}
+		}
+		return true;
+	});
+}else if(document.body.attachEvent) {
+	document.body.attachEvent("onmousewheel" , function(e) {
+		if(controlLock != 0) {
+			return;
+		}
+		var scrollY_ = clipScrollY(currentTab.scrollY - preference.scrollAmount * e.wheelDeltaY / 120);
+		var scrollX_ = clipScrollX(currentTab.scrollX - preference.scrollAmount * e.wheelDeltaX / 120);
+		if(scrollY_ != currentTab.scrollY || scrollX_ != currentTab.scrollX) {
+			currentTab.scrollY = scrollY_;
+			currentTab.scrollX = scrollX_;
+			refresh();
+			return false;
+		}
+		return true;
+	});
+}
+
+canvas.ondragstart = function(e) {
+	if(controlLock != 0 || currentTab.selectNode == null) {
+		return false;
+	}
+	adjustXY(e);
+	if(currentTab.selectNode.touchArea(mouseX, mouseY) == null) {
+		return false;
+	}
+	var c = document.createElement("canvas");
+	e.dataTransfer.setDragImage(c, 0, 0);
+	var sn = currentTab.selectNode;
+	if(sn != null) {
+		e.dataTransfer.setData("text/vse", JSON.stringify(sn.toObject()));
+		e.dataTransfer.setData("text/plain", sn.toString());
+	} else {
+		return false;
+	}
+	//++controlLock;
+};
+
+document.ondragend = function(e) {
+	//--controlLock;
+};
+
+canvas.ondragover = function(e) {
+	adjustXY(e);
+	e.preventDefault();
+};
+
+canvas.ondrop = function(e) {
+	var data = e.dataTransfer.getData("text/plain");
+	data += "\n\n" + e.dataTransfer.getData("text/vse");
+	//alert(data);
+};
+
+window.onresize = function() {
+	canvas.width = document.body.clientWidth - 4;//window.innerWidth;
+	canvas.height = window.innerHeight - footerHeight;
+	refresh();
+};
+
+document.onkeydown = function(e) {
+	if(controlLock != 0 || !(document.activeElement === document.body)) {
+		return;
+	}
+	keyGuard = -2;
+	var ctrl = (e.ctrlKey&&!e.metaKey)||(!e.ctrlKey&&e.metaKey);
+
+	// コピーとかはここでやる
+	if(ctrl && currentTab.selectNode != null) {
+		if(e.keyCode == 88) { // cut
+			clipboard = currentTab.selectNode.copy();
+			clipboardAccesser.innerHTML = currentTab.selectNode.toString();
+			window.getSelection().removeAllRanges();
+			window.getSelection().selectAllChildren(clipboardAccesser);
+			//console.log(window.getSelection().toString());
+			var op = OperationRemove.create(currentTab.selectNode);
+			if(op != null) {
+				currentTab.doOperation(op);
+				reflow();
+				refresh();
+			}
+			clipboardAccesser.focus();
+			window.setTimeout(function() {
+				clipboardAccesser.innerHTML = "";
+				clipboardAccesser.blur();
+				canvas.focus();
+			}, 10);
+			return true;
+		} else if(e.keyCode == 67) { // copy
+			clipboard = currentTab.selectNode.copy();
+			clipboardAccesser.innerHTML = currentTab.selectNode.toString();
+			window.getSelection().removeAllRanges();
+			window.getSelection().selectAllChildren(clipboardAccesser);
+			clipboardAccesser.focus();
+			//console.log(window.getSelection().toString());
+			window.setTimeout(function() {
+				clipboardAccesser.innerHTML = "";
+				clipboardAccesser.blur();
+				canvas.focus();
+			}, 10);
+			return true;
+		} else if(e.keyCode == 86) { // paste
+			clipboardAccesser.focus();
+			window.setTimeout(function() {
+			var src = clipboardAccesser.textContent;
+			clipboardAccesser.innerHTML = "";
+			clipboardAccesser.blur();
+			//console.log(src);
+			var pr = parseSexp(src);
+			if(pr == null) {
+				pr = new SStringView(src.trim());	// パースできなければ文字列としてぶっこむ
+			} else if(clipboard != null) {
+				if(pr.equal(clipboard.toSexp())) {
+					pr = clipboard.copy();
+				} else {
+					pr = pr.toView();
+				}
+			} else {pr = pr.toView();}
+
+			if(currentTab.mode == 1 && currentTab.selectNode instanceof ConsView || (currentTab.selectNode instanceof NilView && currentTab.selectNode.parent != null && currentTab.selectNode.parent.cdr == currentTab.selectNode)) {
+				var op = OperationInsert.create(currentTab.selectNode, pr);
+				if(op != null) {
+					currentTab.doOperation(op);
+					currentTab.selectNode = currentTab.selectNode.parent.car;
+					reflow();
+					refresh();
+				}
+			} else {
+				var op = OperationFix.create(currentTab.selectNode, pr);
+				if(op != null) {
+					currentTab.doOperation(op);
+					reflow();
+					refresh();
+				}
+			}
+			canvas.focus();
+			}, 10);
+			return true;
+		}
+	}
+
+	++controlLock;
+	var key = "keyDown" + (ctrl ? "C" : "") + (e.shiftKey ? "S" : "") + e.keyCode;
+	if(key in preference.behavior) {
+		var pr = parseSexp(preference.behavior[key]);
+		var ler = lisp(pr, true);
+		--controlLock;
+		return (ler instanceof Symbol && ler.value == "#t");
+	}
+	--controlLock;
+	return true;
+};
+
+document.onkeyup = function(e) {
+	if(keyGuard == -2) {
+		keyGuard = -1;
+		return false;
+	}
+	return true;
+};
+
+/*
+document.onkeydownaa = function(e) {
+	if(document.activeElement === document.body) {
+		} else if(e.keyCode == 73 && !e.ctrlKey) {	// i
+			if(e.shiftKey) {
+				if(current != null) {
+					var ool = current.outOfList();
+					if(ool != null) {
+						current.remove();
+						ool.insert(current);
+						reflow();
+						refresh();
+					}
+				}
+			} else {
+				if(current instanceof ConsView && current.parent != null && current.parent.cdr instanceof ConsView) {
+					var t = current.parent.nth(1);
+					var s = t.remove();
+					var ll = current.listLast();
+					if(s != null && ll != null) {
+						ll.parent.insert(t);
+						reflow();
+						refresh();
+					}
+				}
+			}
+			return false;
+		} else if(e.keyCode == 80) {	// p
+			if(current != null && current.parent != null) {
+				var cs = current.parent.insert(new ConsView(new NilView(), new NilView()));
+				if(cs != null) {
+					current = cs.car;
+					beginEdit(current);
+				}
+				return false;
+			}
+		} else if(e.keyCode == 32) { // 32 Space 65 a
+			if(currentTab.selectNode != null && currentTab.selectNode.parent != null) {
+				if(!e.ctrlKey) {
+					var cs = currentTab.selectNode.parent.insert(new Symbol("_"));
+					if(cs != null) {
+						currentTab.selectNode = cs;
+						beginEdit(currentTab.selectNode);
+					}
+				} else {
+					sexpReplace(currentTab.selectNode.parent.listLast(), new Symbol("_"));
+					beginEdit(currentTab.selectNode);
+				}
+			}
+			return false;
+		} else if(e.keyCode == 65 && e.ctrlKey) {
+			if(current == root) {
+				current = null;
+			} else {
+				current = root;
+			}
+			reflow();
+			refresh();
+			return false;
+		} else if((e.keyCode == 38 || e.keyCode == 75) && !e.ctrlKey && !e.shiftKey) { // up
+			if(current instanceof ConsView) {	// そのリスト中の(物理的に)上のリスト　もしくは　そのリストが入っているリスト　を選択
+				if(current.parent != null) {
+					var cs = current;
+					cs = cs.parent;
+					while(cs.parent instanceof ConsView) {
+						if(cs.parent.tate) {	// 縦位置
+							if(cs.parent.cdr == cs) {	// cdr
+								if(cs.parent.car instanceof ConsView) {	// list
+									cs = cs.parent.car;
+									break;
+								}
+							}
+						}
+						if(cs.parent.car == cs) {
+							break;
+						}
+						cs = cs.parent;
+					}
+					current = cs;
+					focusFitToCanvas();
+					reflow();
+					refresh();
+				}
+			} else if(current != null) {	// そのリスト中の(物理的に)上の要素　もしくは　　を選択
+				if(current.parent != null) {
+					var cs = current;
+					cs = cs.parent;
+					while(cs.parent instanceof ConsView) {
+						if(cs.parent.tate && cs.parent.cdr == cs) {
+							cs = cs.parent.car;
+							if(!(cs instanceof ConsView)) {
+								break;
+							}
+							while(cs instanceof ConsView) {
+								cs = cs.car;
+							}
+							break;
+						} else {
+							cs = cs.parent;
+						}
+					}
+					if(cs != root) {
+						current = cs;
+					}
+					focusFitToCanvas();
+					reflow();
+					refresh();
+				}
+			}
+			return false;
+		} else if((e.keyCode == 40 || e.keyCode == 74) && !e.ctrlKey && !e.shiftKey) { // down
+			if(current instanceof ConsView) {
+				var cs = current.cdr;
+				while(true) {
+					while(true) {
+						if(cs.parent.tate && cs.car instanceof ConsView) {
+							current = cs.car;
+							focusFitToCanvas();
+							reflow();
+							refresh();
+							return false;
+						}
+						if(!(cs.cdr instanceof ConsView)) {
+							break;
+						}
+						cs = cs.cdr;
+					}
+					while(cs.parent instanceof ConsView && (cs.parent.cdr == cs || cs.parent.cdr instanceof NilView)) {
+						cs = cs.parent;
+					}
+					if(cs == root) {
+						return false;
+					}
+					cs = cs.parent.cdr;
+				}
+				focusFitToCanvas();
+				reflow();
+				refresh();
+			} else if(current != null) {
+				var cs = current;
+				while(true) {
+					while(cs.parent instanceof ConsView && (cs.parent.cdr == cs || cs.parent.cdr instanceof NilView)) {
+						cs = cs.parent;
+					}
+					if(cs == root) {
+						return false;
+					}
+					cs = cs.parent.cdr;
+
+					while(true) {
+						if(cs.tate) {
+							while(cs instanceof ConsView) {
+								cs = cs.car;
+							}
+							current = cs;
+							focusFitToCanvas();
+							reflow();
+							refresh();
+							return false;
+						}
+						if(!(cs.cdr instanceof ConsView)) {
+							break;
+						}
+						cs = cs.cdr;
+					}
+				}
+				focusFitToCanvas();
+				reflow();
+				refresh();
+			}
+			return false;
+		} else if((e.keyCode == 37 || e.keyCode == 72) && !e.ctrlKey && !e.shiftKey) { // left
+			if(current instanceof ConsView) {
+				if(current.parent != null) {
+					var cs = current;
+					cs = cs.parent;
+					while(cs.parent instanceof ConsView) {
+						if(!cs.parent.tate && cs.parent.cdr == cs) {
+							if(cs.parent.car instanceof ConsView) {
+								cs = cs.parent.car;
+								break;
+							}
+						} else if(cs.parent.car == cs) {
+							//current = cs;
+							break;
+						}
+						cs = cs.parent;
+					}
+					current = cs;
+					focusFitToCanvas();
+					reflow();
+					refresh();
+				}
+			} else if(current != null) {
+				if(current.parent != null) {
+					var cs = current;
+					cs = cs.parent;
+					while(cs.parent instanceof ConsView) {
+						if(!cs.parent.tate && cs.parent.cdr == cs) {
+							if(cs.parent.car instanceof ConsView) {
+								cs = cs.parent.car.lastElement();
+								break;
+							} else if(true) {
+								cs = cs.parent.car;
+								break;
+							}
+						}
+						cs = cs.parent;
+					}
+					if(cs != root) {
+						current = cs;
+					}
+					focusFitToCanvas();
+					reflow();
+					refresh();
+				}
+			}
+			return false;
+		} else if((e.keyCode == 39 || e.keyCode == 76) && !e.ctrlKey && !e.shiftKey) { // right
+			if(current instanceof ConsView) {
+				var cs = current;
+				while(true) {
+					if(cs.car instanceof ConsView) {
+						current = cs.car;
+						focusFitToCanvas();
+						reflow();
+						refresh();
+						return false;
+					}
+					if(!(cs.cdr instanceof ConsView)) {
+						break;
+					}
+					cs = cs.cdr;
+				}
+				while(true) {
+					while(true) {
+						if(!cs.tate && cs.car instanceof ConsView) {
+							current = cs.car;
+							focusFitToCanvas();
+							reflow();
+							refresh();
+							return false;
+						}
+						if(!(cs.cdr instanceof ConsView)) {
+							break;
+						}
+						cs = cs.cdr;
+					}
+					while(cs.parent instanceof ConsView && (cs.parent.cdr == cs || cs.parent.cdr instanceof NilView)) {
+						cs = cs.parent;
+					}
+					if(cs.parent == null) {
+						return false;
+					}
+					cs = cs.parent.cdr;
+				}
+				focusFitToCanvas();
+				reflow();
+				refresh();
+			} else if(current != null) {
+				var cs = current.parent.cdr;
+				while(cs != null) {
+					if(cs instanceof NilView && cs.parent.cdr == cs) {
+						cs = cs.listHead();
+						if(cs == null || cs == root) {
+							break;
+						}
+						cs = cs.parent.cdr;
+					} else if(cs instanceof ConsView) {
+						cs = cs.car;
+					} else {
+						current = cs;
+						break;
+					}
+				}
+				focusFitToCanvas();
+				reflow();
+				refresh();
+			} else if((e.keyCode == 38 || e.keyCode == 75) && !e.ctrlKey && e.shiftKey) {	// 上へ移動
+			if(current == null || current.parent == null || current.parent.car != current || current.parent.parent == null || current.parent.parent.cdr != current.parent || !current.parent.parent.tate) {
+				return false;
+			}
+			current.parent.car = current.parent.parent.car;
+			current.parent.parent.car = current;
+			current.parent.car.parent = current.parent;
+			current.parent = current.parent.parent;
+			reflow();
+			refresh();
+			return false;
+		} else if((e.keyCode == 40 || e.keyCode == 74) && !e.ctrlKey && e.shiftKey) {	// したへ移動
+			if(current == null || current.parent == null || current.parent.car != current || !(current.parent.cdr instanceof ConsView)) {
+				return false;
+			}
+			if(current.parent.tate) {
+				current.parent.car = current.parent.nth(1);
+				current.parent.nth(1) = current;
+				current.parent.car.parent = current.parent;
+				current.parent = current.parent.cdr;
+			} else {
+				current.parent.tate = true;
+			}
+			reflow();
+			refresh();
+			return false;
+		} else if((e.keyCode == 37 || e.keyCode == 72) && !e.ctrlKey && e.shiftKey) {	// 左へ移動
+			if(current == null || current.parent == null || current.parent.car != current || current.parent.parent == null || current.parent.parent.tate || current.parent.parent.cdr != current.parent) {
+				return false;
+			}
+			current.parent.car = current.parent.parent.car;
+			current.parent.parent.car = current;
+			current.parent.car.parent = current.parent;
+			current.parent = current.parent.parent;
+			reflow();
+			refresh();
+			return false;
+		} else if((e.keyCode == 39 || e.keyCode == 76) && !e.ctrlKey && e.shiftKey) {	// 右へ移動
+			if(current == null || current.parent == null || current.parent.car != current || !(current.parent.cdr instanceof ConsView)) {
+				return false;
+			}
+			if(!current.parent.tate) {
+				current.parent.car = current.parent.nth(1);
+				current.parent.nth(1) = current;
+				current.parent.car.parent = current.parent;
+				current.parent = current.parent.cdr;
+			} else {
+				current.parent.tate = false;
+			}
+			reflow();
+			refresh();
+			return false;
+		}
+	}
+
+	return true;
+};*/
+
+///////////////////////////////////////////////////////////
+
+var tabs = new Array();
+
+function addTab(tab) {
+	var tabBar = document.getElementById("tabBar");
+	var td = document.createElement("span");
+	td.className = "tabLabel";
+	var tl = document.createElement("span");
+	tl.innerHTML = tab.name;
+	td.appendChild(tl);
+	var cb = document.createElement("span");
+	cb.innerHTML = "×";
+	cb.className = "tabCloseButton";
+	td.appendChild(cb);
+	tabBar.appendChild(td);
+	var idx = tabBar.childnodes - 1;
+
+	tab.tabLabelElement = td;
+
+	td.onmousedown = function(e) {
+		return false;
+	};
+	tl.onclick = function() {
+		if(controlLock == 0) {
+			selectTab(tab);
+		}
+	};
+	cb.onclick = function() {
+		if(controlLock == 0 && 1 < tabs.length && window.confirm(tab.name + " を閉じてもよろしいですか？")) {
+			removeTab(tab);
+		}
+	};
+
+	tabs.push(tab);
+	return tab;
+};
+function selectTab(tab) {
+	for(var i = 0, len = tabs.length; i < len; ++i) {
+		if(tabs[i] == currentTab) {
+			tabs[i].tabLabelElement.className = "tabLabel";
+			tabs[i].tabLabelElement.lastChild.className = "tabCloseButton";
+		}
+	}
+	tab.tabLabelElement.className = "currentTabLabel";
+	tab.tabLabelElement.lastChild.className = "currentTabCloseButton";
+	currentTab = tab;
+	needReflow = true;
+	refresh();
+};
+function removeTab(tab) {
+	if(tabs.length <= 1) {
+		return;
+	}
+	for(var i = 0, len = tabs.length; i < len; ++i) {
+		if(tabs[i] == currentTab && tabs[i] == tab) {
+			selectTab(tabs[0 == i ? i + 1 : i - 1]);
+		}
+	}
+	tab.tabLabelElement.parentNode.removeChild(tab.tabLabelElement);
+	var idx = tabs.indexOf(tab);
+	tabs.splice(idx, 1);
+};
+function renameTab(tab, name) {
+	tab.name = name;
+	tab.tabLabelElement.firstChild.innerHTML = name;
+};
+
+document.getElementById("newTabButton").onclick = function() {
+	var tab = new Tab("new", new SymbolView('_'));
+	selectTab(addTab(tab));
+	reflow();
+	refresh();
+};
+document.getElementById("newTabButton").onmousedown = function() {
+	return false;
+};
+
+///////////////////////////////////////////////////////////
+
+function autoTate(s, width) {
+	reflow();
+	(function(sexp, width) {
+		if(width < sexp.right - sexp.left && sexp instanceof ConsView && !sexp.tate) {
+			/*sexp.tate = true;
+			arguments.callee(sexp.car, width - 6);
+			arguments.callee(sexp.cdr, width - 6);*/
+			while(sexp instanceof ConsView) {
+				sexp.tate = true;
+				arguments.callee(sexp.car, width - 6);
+				sexp = sexp.cdr;
+			}
+			arguments.callee(sexp, width - 6);
+		}
+	})(s, width);
+	/*s.applyAllNodes(function(sexp) {
+		if(canvas.width < sexp.right - sexp.left && sexp instanceof Cons && !sexp.tate) {
+			sexp.tate = true;
+		}
+	});*/
+};
+
+///////////////////////////////////////////////////////////
+
+document.body.onload = function() {
+	// preference用意
+	var np = window.localStorage.getItem("preference");
+	if(np != undefined && getUrlParameter("prefUnload") != "true") {
+		preference = JSON.parse(np);
+		console.log("preferenceをロードしました");
+	} else {
+		preference = JSON.parse(JSON.stringify(defaultPreference));
+	}
+
+
+	var ti = document.getElementById("textInput")
+	ti.style.fontSize = preference.fontSize + "pt";
+	ti.style.fontFamily = preference.fontFamily;
+	ti.style.top = (- 100) + "px";
+
+	var ci = document.getElementById("commandInput")
+	ci.style.fontSize = preference.fontSize + "pt";
+	ci.style.fontFamily = preference.fontFamily;
+
+	canvas.style.backgroundColor  = "#FDFDFD";
+
+	window.onresize();
+
+
+	currentTab = new Tab("new", new SymbolView("_"));
+	selectTab(addTab(currentTab));
+	if("initialize" in preference.behavior && preference.behavior["initialize"] != null) {
+		var pr = parseSexp(preference.behavior["initialize"]);
+		var ler = lisp(pr, true);
+	} else {
+		hajimeni();
+		//jsopNiTuite();
+		selectTab(tabs[0]);
+	}
+
+	controlLock = 0;
+};
+
+function hajimeni() {
+	// 最初の式初期化
+	var pr = parseSexp("(ヴィジュアルS式エディタへようこそ！ (このエディタは・・・ S式の煩雑な括弧を見やすくしようという思いのもと開発されていたようです) (S式 S式はLISPで用いられるコードの表記表現の一つです (定義 (1 \"アトム(記号、真理値、数値、文字列、文字といったドット対以外の単純データ、及び空リスト)はS式である。\") (2 \"S1、S2がS式であるときのドット対(S1 . S2)はS式である。\") (3 \"1、2により構成されるものだけがS式である。\"))) (Tips (コピー&ペーストが可能です) ('によるquoteには対応してません) (矢印キーはhjklで代用できます) (dキーでリストの畳み込みができます) (畳み込まれているリストはdキーで開いて読みましょう)) (試験的な機能 (shift+eで選択中のノードをLISPのコードとして評価することができます Schemeライクな処理系が実装されています) (自動レイアウト) (Ctrl+zでUNDO、Ctrl+Shift+zでREDO) (オートコンプリート アトム入力時にアトムの候補を表示します) (タブ)) (実装したい機能 (検索/置換) (マクロ) (GoogleDriveとの連携)) (http://google.com/))");
+	var rn = pr.toView();
+	rn.displayTate(true);
+	rn.color = 4;
+	rn.nth(1).displayTate(true);
+	rn.nth(1).color = 1;
+	rn.nth(2).displayTate(true);
+	rn.nth(2).color = 2;
+	rn.nth(3).displayTate(true);
+	rn.nth(3).color = 3;
+	rn.nth(3).nth(2).displayTate(true);
+	rn.nth(4).displayTate(true);
+	rn.nth(5).displayTate(true);
+	rn.nth(6).displayTate(true);
+
+	renameTab(currentTab, "はじめに");
+	currentTab.rootNode = rn;
+	currentTab.selectNode = null;
+
+	autoTate(rn, canvas.width - 40);
+
+	selectTab(currentTab);
+};
+
+function macroShu() {
+	var pr = parseSexp("(ヴィジュアルS式エディタへようこそ！ (このエディタは・・・ S式の煩雑な括弧を見やすくしようという思いのもと開発されていたようです) (主要なキーの役割 (矢印キー 選択移動) (Shift+矢印キー ノードの移動) (Tab 選択状態をノードと葉で切り替え) (r リストの縦横表示切り替え) (Return (構造編集モード時 S式入力モードにする) (S式入力モード時 構造編集モードに戻る)) (Ctrl+Return|Space ノード追加) (BackSpace ノードを削除) (t 選択しているノードを括弧で囲む) (Shift+t 選択しているノードの括弧を外す) (i 選択中のリストにそのリストの一つ下の要素を取り込む) (Shift+i ノードをリストの外に出す) (1-5 リストの色を変える) (Ctrl+Space コマンド入力)) (S式 S式はLISPで用いられるコードの表記表現の一つです (定義 (1 \"アトム(記号、真理値、数値、文字列、文字といったドット対以外の単純データ、及び空リスト)はS式である。\") (2 \"S1、S2がS式であるときのドット対(S1 . S2)はS式である。\") (3 \"1、2により構成されるものだけがS式である。\"))) (Tips (コピー&ペーストが可能です) ('によるquoteには対応してません) (矢印キーはhjklで代用できます) (dキーでリストの畳み込みができます) (畳み込まれているリストはdキーで開いて読みましょう)) (試験的な機能 (shift+eで選択中のノードをLISPのコードとして評価することができます Schemeライクな処理系が実装されています) (自動レイアウト) (Ctrl+zでUNDO、Ctrl+Shift+zでREDO) (オートコンプリート アトム入力時にアトムの候補を表示します) (タブ)) (実装したい機能 (検索/置換) (マクロ) (GoogleDriveとの連携)) (http://google.com/))");
+	var rn = pr.toView();
+	rn.displayTate(true);
+
+	currentTab = new Tab("便利なマクロ集", rn);
+
+	autoTate(rn, canvas.width - 40);
+
+	selectTab(addTab(currentTab));
+};
+
+function jsopNiTuite() {
+	var str = "(\"JSOP超速チュートリアル\" \"JSOPとはSchemeに似たプログラミング言語です\" \"Visual S-expression Editorでは、Ctrl+eで選択した式をJSOPコードとして評価することができます\" \"Hello World!を表示してみよう\" (alert \"Hello World\") \"alertは式を評価した結果をアラートで表示する命令です\" \"文字列を評価するとその文字列自体が返ってきます\" \"足し算してみよう\" (alert (+ 1 2)) \"カッコで囲むことによりリストとなり、リストを評価することで関数を実行します\" \"リストの中の頭の + が関数名、 + 以降は引数になります\" \"リストは以下のように入れ子して評価することができます\" (alert (* (+ 2 3) 4)) \"リストを作ろう\" (alert (list 1 2 (+ 1 2))) \"list関数でリストを作ることができます\" \"リストの要素は評価されるので上記のように足し算をしてから入れることができます\" \"手続きを作ろう\" (define hello (alert \"Hello world\")) \"defineはグローバル変数を宣言する命令です\" \"1つ目の引数が定義したい変数名、2つ目の引数がそのボディになります\" \"defineした後、 (hello) と入力することで(alert 'Hello world')を実行できます\" \"関数を作ろう\" (define add2 (lambda (x y) (+ x y))) \"x,yの2つの引数を受け取って足し算して返す関数です\" \"関数はlambdaという特殊形式を用いて実現します\" \"lambdaの第一引数が仮引数のリスト、第二引数がボディになります\" \"関数定義はもっと短く記述することができます\" (define (add2 x y) (+ x y)) \"これは先程の関数定義と同等のものになります\" \"条件分岐してみよう\" (if #t (alert \"真です\") (alert \"偽です\")) \"ifで条件分岐できます\" \"第一引数が真であるとき第二引数が評価され、偽のとき第三引数が評価されます\" \"真は#t、偽は#fで表されますが、それ以外の値は真となります\" \"もっと条件分岐しよう\" (cond ((<= x 0) (alert \"xは0以下です\")) ((< 1 x) (alert \"xは1より大きいです\")) (else (alert \"xは0より大きく1以下です\"))) \"condでC言語のif-else分のような書き方ができます\" \"いっぱい式を評価しよう\" (begin (alert \"式を順番に評価していくよ\") (define hoge \"ほげ\") (hoge)) \"beginで複数の式を順番に評価することができます\" \"返り値は最後に評価した結果になります\" \"一時的な変数を作ろう\" (let ((one 1) (x (+ one 1))) (alert x)) \"letで局所変数を使うことができます\" \"第一引数が変数と値のペアのリスト、第二引数が評価される式になります\" \"変数に代入しよう\" (begin (set! x 10) (alert x)) \"set!で変数に破壊的代入ができます\" \"再帰で繰り返し処理をしよう\" (begin (define (fact n) (if (= n 1) 1 (* n (fact (- n 1))))) (alert (fact 5))) \"関数型言語では一般的に繰り返し処理を再帰で行います\")";
+
+	var rn = parseSexp(str).toView();
+
+	currentTab = new Tab("JSOPについて", rn);
+
+	autoTate(rn, canvas.width - 40);
+
+	selectTab(addTab(currentTab));
+};
+
+window.onunload = function(e) {
+	if("finalize" in preference.behavior && preference.behavior["finalize"] != null) {
+		var pr = parseSexp(preference.behavior["finalize"]);
+		var ler = lisp(pr, true);
+	}
+
+	window.localStorage.setItem("preference", JSON.stringify(preference));
+	console.log("preferenceをセーブしました");
+};
+
+window.onbeforeunload = function(event){ // ページを閉じるときに本当に閉じるかどうかを聞く処理
+	event = event || window.event;
+	if(preference.confirmWindowClose) {
+		return event.returnValue = '';
+	}
+};
+
+///////////////////////////////////////////////////////////
+
+document.getElementById("commandInput").onkeydown = function(e) {
+	if(e.keyCode == 13) {
+		return false;
+	};
+	return true;
+};
+document.getElementById("commandInput").onkeyup = function(e) {
+	if(e.keyCode == 13) {
+		var src = this.textContent;
+		var pr = parseSexp(src);
+		lisp(pr, true);
+		return false;
+	};
+	return true;
+};
+
+document.getElementById("textInput").onkeydown = function(e) {
+	if(keyGuard == -2) {
+		return false;
+	}
+	keyGuard = -1;
+	if(e.keyCode == 13 && !e.ctrlKey && !e.shiftKey) {
+		keyGuard = 0;
+		return false;
+	} else if(e.keyCode == 27) {
+		return false;
+	} else if(e.keyCode == 32 && !e.ctrlKey) {
+		return true;
+	} else if(e.keyCode == 38 && !e.ctrlKey && !e.shiftKey) {
+		if(textAutoComplete.selectedIndex == -1) {
+			textAutoComplete.selectedIndex = textAutoComplete.length - 1;
+		} else {
+			--textAutoComplete.selectedIndex;
+		}
+		keyGuard = -2;	// TODO
+		return false;
+	} else if(e.keyCode == 40 && !e.ctrlKey && !e.shiftKey) {
+		if(textAutoComplete.selectedIndex == -1) {
+			textAutoComplete.selectedIndex = 0;
+		} else {
+			++textAutoComplete.selectedIndex;
+		}
+		keyGuard = -2;
+		return false;
+	}
+	return true;
+};
+document.getElementById("textInput").onkeyup = function(e) {
+	if(keyGuard == -2) {
+		keyGuard = -1;
+		return false;
+	}
+	//autocomplete
+	if(keyGuard == -1 && preference.autoCompleteEnable) {
+		//*
+		while(textAutoComplete.hasChildNodes()) {
+			textAutoComplete.removeChild(textAutoComplete.lastChild);
+		}
+		var tc = this.textContent;
+		for(var key in currentTab.atomCount) {
+			//currentTab.atomCount
+			if(key.substring(0, tc.length) == tc) {
+				var ae = document.createElement("option");
+				ae.innerHTML = key;
+				textAutoComplete.appendChild(ae);
+			}
+		}
+		if(textAutoComplete.length != 0) {
+			//textAutoComplete.innerHTML = "<div>hoge</div><div>hogehoge</div>";
+			var rect = this.getBoundingClientRect();
+			textAutoComplete.style.left = rect.left + "px";
+			//textAutoComplete.style.top = (rect.top + textAutoComplete.clientHeight) + "px";
+			textAutoComplete.style.top = rect.bottom + "px";
+			textAutoComplete.style.display = "block";//*/
+		} else {
+			textAutoComplete.style.display = "none";
+		}
+	}
+
+	if(e.keyCode == 13 && !e.ctrlKey && !e.shiftKey && keyGuard == 0) {
+		// 正しいかどうかチェック
+		window.setTimeout(function() {document.getElementById("textInput").blur();}, 10);	// 大事
+		return false;
+	} else if(e.keyCode == 27) { // esc
+		this.value = editingNode.toString();	// キャンセル！
+		this.blur();
+		return false;
+	} else if(e.keyCode == 32 && !e.ctrlKey) {
+		var src = this.textContent.replace(/　$/, " ");
+		var pr = parseAll(src);
+		if(pr != null && pr.rest == " " && editingNode.parent != null) {
+			currentTab.selectNode = editingNode;
+			this.innerHTML = src;	// んー？
+			this.blur();
+			var op = OperationInsert.create(currentTab.selectNode.parent, new SymbolView("_"));
+			if(op != null) {
+				currentTab.doOperation(op);
+				beginEdit(currentTab.selectNode);
+			}
+		}
+		return false;
+	}
+	return true;
+};
+document.getElementById("textInput").onblur = function() {
+	--controlLock;
+
+	var src;
+	// オートコンプリート
+	if(preference.autoCompleteEnable  && textAutoComplete.selectedIndex != -1) {
+		src = textAutoComplete.value;
+	} else {
+		src = this.textContent;
+	}
+
+	this.style.top = (- 100) + "px";
+	this.style.display = "none";
+	this.innerHTML = "";
+
+	textAutoComplete.style.top = (- 100) + "px";
+	textAutoComplete.style.display = "none";
+	//textAutoComplete.innerHTML = "";
+
+	if(editingNode != null) {
+		var op = null;
+		if(src == "") {
+			op = OperationRemove.create(editingNode);
+		} else {
+			var pr = parseSexp(src);
+			if(pr != null) {
+				op = OperationFix.create(editingNode, pr.toView());
+			}
+		}
+		if(op != null) {
+			currentTab.doOperation(op);
+		}
+		editingNode = null;
+		reflow();
+		refresh();
+	} else {
+		var pr = parseSexp(src);
+		if(pr != null) {
+			lisp(pr);
+		}
+	}
+};
+
+document.getElementById("commandInput").onmousedown = function(e) {
+	e.cancelBubble = true;
+};
+document.getElementById("commandInput").onfocus = function(e) {
+	this.innerHTML = this.textContent;
+};
+document.getElementById("commandInputFrame").onmousedown = function(e) {
+	adjustXY(e);
+	var rect = this.getBoundingClientRect();
+	mouseDragX = mouseX - rect.left;
+	mouseDragY = mouseY - rect.top;
+	dragMode = 4;
+	return false;
+};
+document.getElementById("commandInputClose").onclick = function(e) {
+	this.parentNode.style.display = "none";
+};
+//function commandInputFrameFitToWindow() {
+//	var cif = document.getElementById("commandInputFrame");
+//};
+
+///////////////////////////////////////////////////////////
+
+LObject.prototype.lispProperty = {
+	" superType": null,
+	" typeName": "Object",
+	"": function(obj, env) {throw "error: hoge"},
+	"instanceof": function(obj, args, env) {
+		var lp = obj.lispProperty;
+		while(lp[" typeName"] != args.nth(0).value) {
+			if(lp[" superType"] == null) return scache.f;
+			lp = lp[" superType"].lispProperty;
+		};
+		return scache.t;
+	},
+	"=": function(obj, args, env) {return scache.f;}
+};
+Sexp.prototype.lispProperty = {
+	" superType": LObject.prototype,
+	" typeName": "Sexp",
+	"->string": function(obj, args, env) {return new SString(obj.toString());},
+	"=": function(obj, args, env) {return BoolToSexp(obj.equal(args.car));}
+};
+Cons.prototype.lispProperty = {
+	" superType": Sexp.prototype,
+	" typeName": "Cons"
+};
+Nil.prototype.lispProperty = {
+	" superType": Sexp.prototype,
+	" typeName": "Nil"
+};
+Symbol.prototype.lispProperty = {
+	" superType": Sexp.prototype,
+	" typeName": "Symbol"
+};
+SString.prototype.lispProperty = {
+	" superType": Sexp.prototype,
+	" typeName": "String",
+	"": function(obj, env) {return obj;}
+};
+SNum.prototype.lispProperty = {
+	" superType": Sexp.prototype,
+	" typeName": "Num",
+	"": function(obj, env) {return obj;},
+	"+": function(obj, args, env) {return new SNum(obj.value + args.nth(0).value);},
+	"-": function(obj, args, env) {return new SNum(obj.value - args.nth(0).value);},
+	"*": function(obj, args, env) {return new SNum(obj.value * args.nth(0).value);},
+	"/": function(obj, args, env) {return new SNum(obj.value / args.nth(0).value);}
+};
+
+SexpView.prototype.lispProperty = {
+	" superType": LObject.prototype,
+	" typeName": "SexpView",
+	"->string": function(obj, args, env) {return new SString(JSON.stringify(obj.toObject()));},
+	"->Sexp": function(obj, args, env) {return obj.toSexp();},
+	"get-parent": function(obj, args, env) {
+		if(obj.parent == null)
+			return scache.nil;
+		else
+			return obj.parent;
+	},
+	"get-parent-list": function(obj, args, env) {
+		if(obj.parent == null) return scache.nil;
+		do {
+			obj = obj.parent;
+			if(obj.parent == null) {
+				return obj;
+			}
+		} while(obj.parent.cdr == obj);
+		return obj;
+	},
+	"get-prev-item": function(obj, args, env) {
+		if(obj.parent == null || obj.parent.car != obj || obj.parent.parent == null || obj.parent.parent.cdr != obj.parent) return scache.nil;
+		return obj.parent.parent.car;
+	},
+	"get-next-item": function(obj, args, env) {
+		if(obj.parent == null || obj.parent.car != obj || !(obj.parent.cdr instanceof ConsView)) return scache.nil;
+		return obj.parent.cdr.car;
+	},
+	"get-next-atom": function(obj, args, env) {
+		var o = obj.nextAtom();
+		return o == null ? scache.nil : o;
+	},
+	"get-prev-atom": function(obj, args, env) {
+		var o = obj.prevAtom();
+		return o == null ? scache.nil : o;
+	},
+	"get-next-node": function(obj, args, env) {
+		var o = obj.nextNode();
+		return o == null ? scache.nil : o;
+	},
+	"get-prev-node": function(obj, args, env) {
+		var o = obj.prevNode();
+		return o == null ? scache.nil : o;
+	},
+	"is-display": function(obj, args, env) {
+		return obj.isDisplay() ? scache.t : scache.f;
+	},
+	"is-list-head": function(obj, args, env) {
+		return scache.f;
+	},
+	"=": function(obj, args, env) {return BoolToSexp(obj.equal(args.car));}
+};
+ConsView.prototype.lispProperty = {
+	" superType": SexpView.prototype,
+	" typeName": "ConsView",
+	"car": function(obj, args, env) {return obj.car;},
+	"cdr": function(obj, args, env) {return obj.cdr;},
+	"get-tate": function(obj, args, env) {return obj.tate ? scache.t : scache.f;},
+	"set-tate": function(obj, args, env) {obj.tate = !(args.nth(0).equal(scache.f)); needReflow = true;},
+	"get-expand": function(obj, args, env) {return obj.expand ? scache.t : scache.f;},
+	"set-expand": function(obj, args, env) {obj.expand = SexpToBool(args.nth(0)); needReflow = true;},
+	"get-color-type": function(obj, args, env) {return new SNum(obj.color);},
+	"set-color-type": function(obj, args, env) {obj.color = args.nth(0).value; needReflow = true;},
+	"get-space": function(obj, args, env) {return new SNum(obj.space);},
+	"set-space": function(obj, args, env) {obj.space = args.nth(0).value; needReflow = true;},
+	"length": function(obj, args, env) {var o = obj;var l = 0;while(o instanceof ConsView) {++l; o = o.cdr;} return new SNum(l);},
+	"nth": function(obj, args, env) {
+		var n = args.nth(0).value;
+		while(0 < n) {obj = obj.cdr; --n;}
+		return obj.car;},
+	"last-item": function(obj, args, env) {
+		while(obj.cdr instanceof ConsView) obj = obj.cdr;
+		return obj.car;
+	},
+	"final-tail": function(obj, args, env) {
+		while(obj instanceof ConsView) obj = obj.cdr;
+		return obj;
+	},
+	"is-list-head": function(obj, args, env) {
+		return (!(obj.parent instanceof ConsView) || obj.parent.car == obj) ? scache.t : scache.f;
+	}
+};
+NilView.prototype.lispProperty = {
+	" superType": SexpView.prototype,
+	" typeName": "NilView",
+	"length": function(obj, args, env) {return new SNum(0);},
+	"final-tail": function(obj, args, env) {return obj;}
+};
+SymbolView.prototype.lispProperty = {
+	" superType": SexpView.prototype,
+	" typeName": "SymbolView"
+};
+SStringView.prototype.lispProperty = {
+	" superType": SexpView.prototype,
+	" typeName": "StringView",
+	"get-width": "",
+	"set-width": "",
+};
+SNumView.prototype.lispProperty = {
+	" superType": SexpView.prototype,
+	" typeName": "NumView"
+};
+
+Function.prototype.lispProperty = {
+	" superType": LObject.prototype,
+	" typeName": "Function"
+};
+
+Tab.prototype.lispProperty = {
+	" superType": LObject.prototype,
+	" typeName": "Tab",
+	"get-name": function(obj, args, env) {return new SString(obj.name);},
+	"set-name": function(obj, args, env) {
+		if(args.nth(0) instanceof SString) {
+			renameTab(obj, args.nth(0).value);
+		} else {
+			throw "error: in Tab.set-name";
+		}
+	},
+	"get-root-node": function(obj, args, env) {return obj.rootNode;},
+	"set-root-node": function(obj, args, env) {
+		if(args.nth(0) instanceof SexpView) {
+			obj.rootNode = args.nth(0);	// TODO
+			needReflow = true;
+		} else {
+			throw "error: in Tab.set-root-node";
+		}
+	},
+	"get-select-node": function(obj, args, env) {return obj.selectNode != null ? obj.selectNode : scache.nil;},
+	"set-select-node": function(obj, args, env) {
+		if(args.nth(0) instanceof SexpView) {
+			obj.selectNode = args.nth(0);
+			needReflow = true;
+			focusFitToCanvas();
+		} else {
+			obj.selectNode = null;
+			//throw "error: in Tab.set-select-node";
+		}
+	},
+	"get-mode": function(obj, args, env) {return new SNum(obj.mode);},
+	"set-mode": function(obj, args, env) {
+		obj.mode = args.nth(0).value;
+	},
+	"undo": function(obj, args, env) {obj.undoOperation();},
+	"redo": function(obj, args, env) {obj.redoOperation();},
+	"node-fix": function(obj, args, env) {
+		// throw
+		var op = OperationFix.create(args.nth(0), args.nth(1));
+		if(op != null) {
+			obj.doOperation(op);
+			needReflow = true;
+			return scache.t;
+		} else {
+			return scache.f;
+		}
+	},
+	"node-remove": function(obj, args, env) {
+		// throw
+		var op = OperationRemove.create(args.nth(0));
+		if(op != null) {
+			obj.doOperation(op);
+			needReflow = true;
+			return scache.t;
+		} else {
+			return scache.f;
+		}
+	},
+	"node-insert": function(obj, args, env) {
+		// throw
+		var op = OperationInsert.create(args.nth(0), args.nth(1));
+		if(op != null) {
+			obj.doOperation(op);
+			needReflow = true;
+			return scache.t;
+		} else {
+			return scache.f;
+		}
+	},
+	"node-move": function(obj, args, env) {
+		// throw
+		var op = OperationMove.create(args.nth(0), args.nth(1));
+		if(op != null) {
+			obj.doOperation(op);
+			needReflow = true;
+			return scache.t;
+		} else {
+			return scache.f;
+		}
+	},
+	"node-swap": function(obj, args, env) {
+		// throw
+		var op = OperationSwap.create(args.nth(0), args.nth(1));
+		if(op != null) {
+			obj.doOperation(op);
+			needReflow = true;
+			return scache.t;
+		} else {
+			return scache.f;
+		}
+	}
+};
+
+function PreferenceO(pref) {
+	this.pref = JSON.parse(JSON.stringify(pref));
+};
+PreferenceO.prototype.lispProperty = {
+	" superType": LObject.prototype,
+	" typeName": "Preference",
+  "set-symbol-text-color": function(obj, args, env) {
+		obj.pref.symbolTextColor[args.nth(0).value] = args.nth(1).value;
+	},
+	"get-symbol-text-color": function(obj, args, env) {
+		return new SString(obj.pref.symbolTextColor[args.nth(0).value]);
+	},
+	"set-behavior": function(obj, args, env) {
+		obj.pref.behavior[args.nth(0).value] = args.nth(1).toString();	// !
+	},
+	"get-behavior": function(obj, args, env) {
+		var v = obj.pref.behavior[args.nth(0).value];
+		if(v == undefined) {
+			return scache.nil;
+		}
+		return parseSexp(v);	// んー？
+	},
+	"set-font-family": function(obj, args, env) {
+		obj.pref.fontFamily = args.nth(0).value;
+	},
+	"get-font-family": function(obj, args, env) {
+		return new SString(obj.pref.fontFamily);
+	},
+	"set-font-size": function(obj, args, env) {
+		obj.pref.fontSize = args.nth(0).value;
+	},
+	"get-font-size": function(obj, args, env) {
+		return new SString(obj.pref.fontSize);
+	}
+};
+
+/*
+function JsonO(json, writable, canAddKey) {
+	this.json = json;
+	this.writable = writable;
+	this.canAddKey = canAddKey;
+};
+JsonO.prototype["get"] = function(args, env) {
+	if(args.nth(0).value in this.json) {
+		var o = this.json[args.nth(0).value];
+		if(typeof o == "object") {
+			return new JsonO(o, this.writable, this.canAddKey);
+		} else {
+			return sexpToObject(o);		
+		}
+	} else {
+		throw "error: in JsonO.get";
+	}
+};
+JsonO.prototype["set"] = function(args, env) {
+	TODO
+};*/
+
+///////////////////////////////////////////////////////////
+
+// lisp
+function LispEnv(outer) {
+	this[" outer"] = outer;
+};
+LispEnv.prototype[" find"] = function(v) {
+	if(this[v]) {
+		return this;
+	} else if(this[" outer"]) {
+		return this[" outer"][" find"](v);
+	}
+	console.log("not found " + this + v);
+	return null;
+};
+LispEnv.prototype[" eval"] = function(sexp) {
+	console.log(sexp.toString());
+	if(sexp instanceof Symbol) {
+		var env = this[" find"](sexp.value);
+		if(env != null)
+			return env[sexp.value];
+		throw "error: not found " + sexp.value;
+	} else if(!(sexp instanceof Cons)) {	// Nil, String, Numだった場合
+		return sexp;
+	} else if(sexp.car instanceof Symbol) {	// special form
+		var sym = sexp.car.value;
+		switch(sym) {
+		case "quote":
+			return sexp.nth(1);
+		case "if":
+			if(!this[" eval"](sexp.nth(1)).equal(scache.f)) {
+				return this[" eval"](sexp.nth(2));
+			} else {
+				return this[" eval"](sexp.nth(3));
+			}
+		case "set!":
+			this[sexp.nth(1).value] = this[" eval"](sexp.nth(2));
+			return sexp.nth(1);
+		case "define":
+			if(sexp.nth(1) instanceof Cons) {
+				this[sexp.nth(1).car.value] = this[" eval"](new Cons(new Symbol("lambda"), new Cons(sexp.nth(1).cdr, sexp.cdr.cdr)));
+				return sexp.nth(1).car;
+			} else {
+				this[sexp.nth(1).value] = this[" eval"](sexp.nth(2));
+				return sexp.nth(1);
+			}
+		case "lambda":
+			var vars = sexp.nth(1);
+			var exp = sexp.nth(2);
+			var te = this;
+			return function(args) {
+				var env = new LispEnv(te);
+				var v = vars;
+				while(v instanceof Cons) {
+					env[v.car.value] = args.car;
+					v = v.cdr;
+					args = args.cdr;
+				}
+				return env[" eval"](exp);
+			};
+		case "and": // デバッグしてない
+			var s = sexp.cdr;
+			while(s.cdr instanceof Cons && !this[" eval"](s.car).equal(scache.f)) {
+				s = s.cdr;
+			}
+			return this[" eval"](s.car);
+		case "or":
+			var s = sexp.cdr;
+			while(s.cdr instanceof Cons && this[" eval"](s.car).equal(scache.f)) {
+				s = s.cdr;
+			}
+			return this[" eval"](s.car);
+		case "begin": // これはfunctionにできるのでは。。
+			var s = sexp.cdr;
+			var ret;
+			while(s instanceof Cons) {
+				ret = this[" eval"](s.car);
+				s = s.cdr;
+			}
+			return ret;
+		case "cond":
+			var s = sexp.cdr;
+			while(s instanceof Cons && !s.car.car.equal(new Symbol("else")) && this[" eval"](s.car.car).equal(scache.f)) {
+				s = s.cdr;
+			}
+			if(s instanceof Nil) {
+				return scache.nil;
+			}
+			return this[" eval"](s.car.nth(1));
+		case "when":
+			if(this[" eval"](sexp.nth(1)).equal(scache.f)) {
+				return;
+			}
+			var s = sexp.cdr.cdr;
+			var ret;
+			while(s instanceof Cons) {
+				ret = this[" eval"](s.car);
+				s = s.cdr;
+			}
+			return ret;
+		case "unless":
+			if(!this[" eval"](sexp.nth(1)).equal(scache.f)) {
+				return;
+			}
+			var s = sexp.cdr.cdr;
+			var ret;
+			while(s instanceof Cons) {
+				ret = this[" eval"](s.car);
+				s = s.cdr;
+			}
+			return ret;
+		case "let":
+			var vars = sexp.nth(1);
+			var env = new LispEnv(this);
+			while(vars instanceof Cons) {
+				env[vars.car.car.value] = env[" eval"](vars.car.nth(1));
+				vars = vars.cdr;
+			}
+			return env[" eval"](sexp.nth(2));
+		case "eval": // これはfunctionにできるのでは。。
+			return this[" eval"](this[" eval"](sexp.nth(1)));
+		}
+	}
+
+	var head = this[" eval"](sexp.car);
+	var te = this;
+	var evalAll = function(s) {
+		if(s instanceof Cons) {
+			return new Cons(te[" eval"](s.car), arguments.callee(s.cdr));
+		} else {
+			return s;
+		}
+	}
+	if(typeof head == "function") {	// 関数を実行
+		var args = evalAll(sexp.cdr);
+		return head(args, te);
+	} else {	// オブジェクトの関数を実行
+		if(sexp.cdr instanceof Cons) {
+			var args = evalAll(sexp.cdr.cdr);
+			return getFunction(head, sexp.nth(1).value)(head, args, te);
+		} else {
+			return getFunction(head, "")(head, te);
+		}
+	}
+};
+
+function getFunction(obj, fn) {
+	if(fn in obj.lispProperty) {
+		return obj.lispProperty[fn];
+	} else if(obj.lispProperty[" superType"] != null) {
+		return getFunction(obj.lispProperty[" superType"], fn);
+	}
+	throw "error: function not find";
+};
+
+function initBasicFunctions(env) {
+	// 特殊なシンボル
+	env["#t"] = scache.t;
+	env["#f"] = scache.f;
+	// 比較
+	env["eq?"] = function(args) {
+		if(args.nth(0) === args.nth(1)) {return scache.t} else {return scache.f};}
+	// eqv?
+	env["equal?"] = function(args) {
+		if(args.nth(0) === args.nth(1)) return scache.t;
+		return getFunction(args.nth(0), "=")(args.nth(0), args.cdr, env);}
+	// 型判定
+	env["pair?"] = function(args) {
+		if(args.nth(0) instanceof Cons) {return scache.t} else {return scache.f};}
+	env["list?"] = function(args) {
+		if(args.nth(0) instanceof Cons || args.nth(0) instanceof Nil) {return scache.t} else {return scache.f};}
+	env["null?"] = function(args) {
+		if(args.nth(0) instanceof Nil) {return scache.t} else {return scache.f};}
+	env["symbol?"] = function(args) {
+		if(args.nth(0) instanceof Symbol) {return scache.t} else {return scache.f};}
+	env["string?"] = function(args) {
+		if(args.nth(0) instanceof SString) {return scache.t} else {return scache.f};}
+	env["int?"] = function(args) {
+		if(args.nth(0) instanceof SNum) {return scache.t} else {return scache.f};}
+	// 数値演算
+	env["+"] = function(args) {
+		var v = 0; while(args instanceof Cons) {v += args.car.value; args = args.cdr;}
+		return new SNum(v)};
+	env["-"] = function(args) {
+		var v = args.car.value; args = args.cdr;
+		while(args instanceof Cons) {v -= args.car.value; args = args.cdr;}
+		return new SNum(v)};
+	env["*"] = function(args) {
+		var v = 1; while(args instanceof Cons) {v *= args.car.value; args = args.cdr;}
+		return new SNum(v)};
+	env["/"] = function(args) {
+		var v = args.car.value; args = args.cdr;
+		while(args instanceof Cons) {v /= args.car.value; args = args.cdr;}
+		return new SNum(v)};
+	// 論理演算？
+	env["not"] = function(args) {
+		if(!args.nth(0).equal(scache.f)) {return scache.f} else {return scache.t};};
+	// 数値比較？
+	env["="] = function(args) {
+		if(args.nth(0).value == args.nth(1).value) {return scache.t} else {return scache.f};}
+	env["<"] = function(args) {
+		while(args.cdr instanceof Cons && args.car.value < args.nth(1).value) {
+			args = args.cdr;}
+		if(args.cdr instanceof Cons) {return scache.f} else {return scache.t};}
+	env[">"] = function(args) {
+		while(args.cdr instanceof Cons && args.car.value > args.nth(1).value) {
+			args = args.cdr;}
+		if(args.cdr instanceof Cons) {return scache.f} else {return scache.t};}
+	env["<="] = function(args) {
+		while(args.cdr instanceof Cons && args.car.value <= args.nth(1).value) {
+			args = args.cdr;}
+		if(args.cdr instanceof Cons) {return scache.f} else {return scache.t};}
+	env[">="] = function(args) {
+		while(args.cdr instanceof Cons && args.car.value >= args.nth(1).value) {
+			args = args.cdr;}
+		if(args.cdr instanceof Cons) {return scache.f} else {return scache.t};}
+	// LISPによくあるリストをいじる系の関数
+	env.cons = function(args) {
+		return new Cons(args.nth(0), args.nth(1));}
+	env.car = function(args) {
+		return args.nth(0).car;}
+	env.cdr = function(args) {
+		return args.nth(0).cdr;}
+	env.append = function(args) {
+		return (function(s) {if(s instanceof Cons) {return new Cons(s.car, arguments.callee(s.cdr));} else {return args.nth(1);}})(args.nth(0))}
+	env.list = function(args) {
+		return args;}
+	env.assq = function(args) {
+		var key = args.car; args = args.nth(1);
+		while(args instanceof Cons) {if(args.car.car == key) {return args.car;} args = args.cdr;}
+		return scache.f;}
+	env.assoc = function(args) {
+		var key = args.car; args = args.nth(1);
+		while(args instanceof Cons) {if(args.car.car.equal(key)) {return args.car;} args = args.cdr;}
+		return scache.f;}
+	env.assp = function(args, env) {
+		var key = args.car; args = args.nth(1);
+		while(args instanceof Cons) {if(env[" eval"](args.car.car)) {return args.car;} args = args.cdr;}
+		return scache.f;}
+	env.map = function(args) {
+		var as = new Array; var func = args.nth(0); args = args.cdr;
+		while(args instanceof Cons) {
+			as.push(args.car); args = args.cdr;
+		}
+		var sa = new Array;
+		while(as[0] instanceof Cons) {
+			var as2 = scache.nil;
+			for(var i = as.length - 1; 0 <= i; --i) {
+				as2 = new Cons(as[i].car, as2);
+				as[i] = as[i].cdr;
+			}
+			sa.push(func(as2));
+		}
+		return arrayToList(sa);
+	}
+	// filter
+	// fold
+	env.take = function(args) {
+		return arrayToList(args.nth(0).toArray().slice(0, args.nth(1).value));
+	}
+	env.drop = function(args) {
+		return arrayToList(args.nth(0).toArray().slice(args.nth(1).value));
+	}
+	env.iota = function(args) {
+		var n = args.nth(0).value;
+		if(n <= 0) {
+			return scache.nil;
+		}
+		var i = 0;
+		var step = 1;
+		if(args.cdr instanceof Cons) {
+			i = args.nth(1).value;
+			if(args.cdr.cdr instanceof Cons) {
+				step = args.nth(2).value;
+			}
+		}
+		var sa = new Array;
+		while(0 <= --n) {
+			sa.push(new SNum(i));
+			i += step;
+		}
+		return arrayToList(sa);
+	}
+	env["string-length"] = function(args) {return new SNum(args.nth(0).value.length);};
+	env["string-char-at"] = function(args) {return new SString(args.nth(0).value.charAt(args.nth(1).value));};
+	env["string-substring"] = function(args) {
+		if(args.cdr.cdr instanceof Cons) {return new SString(args.nth(0).value.substring(args.nth(1).value, args.nth(2).value));
+		} else {return new SString(args.nth(0).value.substring(args.nth(1).value));}};
+	env["string-replace"] = function(args) {return new SString(args.nth(0).value.replace(args.nth(1).value, args.nth(2).value));};
+	//env["string-join"] = function(args);
+	env["string-append"] = function(args) {
+		var str = ""; while(args instanceof Cons) {str += args.car.value; args = args.cdr;}
+		return new SString(str)};
+
+	env["string->symbol"] = function(args) {	// んー？
+		return new Symbol(args.nth(0).value);};
+	env["symbol->string"] = function(args) {
+		return new SString(args.nth(0).value);};
+	env["num->string"] = function(args) {
+		return new SString(String(args.nth(0).value));};
+	env["string->num"] = function(args) {
+		return new SNum(Number(args.nth(0).value));};
+};
+
+function initSystemFunctions(env) {
+	env["typeof"] = function(args) {
+		return new SString(args.nth(0).lispProperty[" typeName"]);}
+
+	env.alert = function(args) {	// 特殊 TODO
+		alert(args.nth(0).value); return args.nth(0);};
+	env["console-log"] = function(args) {
+		console.log(args.nth(0).value); return args.nth(0);};
+	env["canvas-refresh"] = function(args) {
+		refresh(); return;};
+
+	env["new-ConsView"] = function(args) {
+		return new ConsView(args.nth(0).copy(), args.nth(1).copy());};
+	env["new-NilView"] = function(args) {
+		return new NilView();};
+	env["new-SymbolView"] = function(args) {
+		return new SymbolView(args.nth(0).value);};
+	env["new-StringView"] = function(args) {
+		return new SStringView(args.nth(0).value);};
+	env["new-NumView"] = function(args) {
+		return new SNumView(args.nth(0).value);};
+
+	env["command-input-show"] = function(args) {
+		document.getElementById("commandInputFrame").style.display = "block";
+		document.getElementById("commandInput").focus(); return;};
+	env["command-input-hide"] =	 function(args) {
+		document.getElementById("commandInputFrame").style.display = "none"; return;};
+
+	//env["get-tab-list"] = function(args) {return new TabO(currentTab);};
+	env["get-preference"] = function(args) {return new PreferenceO(preference);};
+	env["set-preference"] = function(args) {preference = args.nth(0)[" getPreference"]();};
+	env["get-default-preference"] = function(args) {return new PreferenceO(defaultPreference);};
+
+	env["get-current-tab"] = function(args) {return currentTab;};
+	env["set-current-tab"] = function(args) {selectTab(args.nth(0));};
+	env["get-tab"] = function(args) {
+		var i = args.nth(0).value;
+		if(0 <= i && i < tabs.length) {
+			return tabs[i];
+		} else {
+			return scache.nil;
+		}
+	};
+	env["new-tab"] = function(args) {
+		var sv;
+		if(args.cdr instanceof Cons) {
+			sv = args.nth(1).copy();
+		} else {
+			sv = new SymbolView('_')
+		}
+		var tab = new Tab(args.nth(0).value, sv);
+		selectTab(addTab(tab));
+		reflow();
+		return tab;
+	};
+	env["remove-tab"] = function(args) {
+		removeTab(args.nth(0));
+		return;
+	};
+	env["get-tab-count"] = function(args) {
+		return new SNum(tabs.length);
+	};
+
+	env["preference-reset"] = function(args) {
+		preferenceReset();  return;};
+
+	env["control-lock"] = function(args) {	// control-lockを行ったら、必ず同じ回数だけcontrol-unlockを行うこと
+		++controlLock;  return;};
+	env["control-unlock"] = function(args) {
+		--controlLock;  return;};
+
+	env["string->Sexp"] = function(args) {
+		var pr = parseSexp(args.nth(0).value);
+		if(pr != null) {return pr} return scache.f;};
+	env["string->SexpView"] = function(args) {
+		return objectToSexpView(JSON.parse(args.nth(0).value));};
+	env["Sexp->string"] = function(args) {return new SString(args.nth(0).toString());};
+	env["Sexp->SexpView"] = function(args) {
+		return args.nth(0).toView();};	// TODO
+	env["SexpView->string"] = function(args) {
+		return new SString(JSON.stringify(args.nth(0).toObject()));};
+	env["SexpView->Sexp"] = function(args) {
+		return args.nth(0).toSexp();};	// TODO
+
+	env["get-canvas-width"] = function(args) {
+		return new SNum(canvas.width);};
+	env["get-canvas-height"] = function(args) {
+		return new SNum(canvas.height);};
+
+	env["begin-edit"] = function(args) {
+		var n = currentTab.selectNode;
+		if(args instanceof Cons) {
+			n = args.car;
+		}
+		if(n == null || n instanceof Nil) {return scache.f;}
+		beginEdit(n);
+		return scache.t;
+	};
+
+	env["local-storage-length"] = function(args) {return new SNum(window.localStorage.length);};
+	env["local-storage-key"] = function(args) {return new SString(window.localStorage.key(args.nth(0).value));};
+	env["local-storage-has-key"] = function(args) {if(args.nth(0).value in window.localStorage) return scache.t; else return scache.f;};
+	env["local-storage-get-item"] = function(args) {return new SString(window.localStorage.getItem(args.nth(0).value));};
+	env["local-storage-set-item"] = function(args) {window.localStorage.setItem(args.nth(0).value, args.nth(1).value); return;};
+	env["local-storage-remove-item"] = function(args) {window.localStorage.removeItem(args.nth(0).value); return;};
+	env["local-storage-clear"] = function(args) {window.localStorage.clear(); return;};
+
+	env["gdrive-auth"] = function(args, env) {
+		window.open(vserUrl + "?action=auth");
+		return;};
+	env["gdrive-init"] = function(args, env) {
+		var c = callbackEvalProc(args.nth(1), env);
+		var fc = callbackEvalProc(args.nth(2), env);
+		jsonp(vserUrl, {action: "init", path: args.nth(0).value}, c, fc);
+		return;};
+	env["gdrive-load"] = function(args, env) {
+		var c = callbackEvalProc(args.nth(1), env);
+		var fc = callbackEvalProc(args.nth(2), env);
+		jsonp(vserUrl, {action: "loadVSE", name: args.nth(0).value}, c, fc);
+		return;};
+	env["gdrive-save"] = function(args, env) {
+		var c = callbackEvalProc(args.nth(3), env);
+		var fc = callbackEvalProc(args.nth(4), env);
+		jsonp(vserUrl, {action: "saveVSE", name: args.nth(0).value, content: args.nth(1).value, overwrite: !args.nth(2).equal(scache.f)}, c, fc);
+		return;};
+	env["gdrive-files"] = function(args, env) {
+		var c = callbackEvalProc(args.nth(0), env);
+		var fc = callbackEvalProc(args.nth(1), env);
+		jsonp(vserUrl, {action: "getVSEFiles"}, c, fc);
+		return;};
+
+	env["http-get-text"] = function(args, env) {
+		var xhr = new XMLHttpRequest();
+		xhr.open("GET", args.nth(0).value, false);	// 同期通信
+		xhr.onreadystatechange = function() {
+		  if (xhr.readyState == 4) { // DONE
+		    if (xhr.status == 200) { // OK
+		    	env[" eval"](new Cons(new Cons(scache.quote, new Cons(args.nth(1), scache.nil)), new Cons(new SString(xhr.responseText), scache.nil))); 
+		    } else {
+		    	env[" eval"](new Cons(new Cons(scache.quote, new Cons(args.nth(2), scache.nil)), new Cons(new SString(xhr.status), scache.nil))); 
+		    } 
+		  }
+		}
+		xhr.send("");
+		return scache.nil;
+	};
+
+	env["open-hajimeni"] = function(args, env) {
+		hajimeni();
+	};
+
+	env["command-debug"] = function(args, env) {
+			var s = objectToSexp({プリファレンス: preference, オートコンプリート用のアトムのカウント: currentTab.atomCount}).toView();
+			currentTab = new Tab("デバッグ情報", s);
+
+			selectTab(addTab(currentTab));
+
+			autoTate(s, canvas.width - 40);
+			reflow();
+			refresh();
+		//env[" eval"](parseSexp("(currentTab test 1)"));
+		//env[" eval"](parseSexp("((window get-current-tab) set-name \"hello!\")"));
+		return;};
+};
+
+function lisp(sexp, isGlobal) {
+	var env;
+	if(isGlobal) {
+		env = globalEnv;
+	} else {
+		env = new LispEnv(null);
+		initBasicFunctions(env);
+		initSystemFunctions(env);
+	}
+
+	try {	// TODO
+		var er = env[" eval"](sexp);
+		refresh();	// あったほうがいいかなぁ？
+		return er;
+	} catch(e) {
+		alert(e);
+	}
+	refresh();	// あったほうがいいかなぁ？
+	return null;
+};
+
+function callbackEvalProc(a, env) {
+	return function(j) {
+		env[" eval"](new Cons(new Cons(scache.quote, new Cons(a, scache.nil)), new Cons(new Cons(scache.quote, new Cons(objectToSexp(j), scache.nil)), scache.nil)));
+	}
+};
+
+var scache = {t: new Symbol("#t"), f: new Symbol("#f"), nil: new Nil(), quote: new Symbol("quote")};
+
+var globalEnv = new LispEnv(null);
+initBasicFunctions(globalEnv);
+initSystemFunctions(globalEnv);
+
+
+	</script>
+</body>
+</html>
