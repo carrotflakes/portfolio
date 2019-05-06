@@ -1,0 +1,2134 @@
+﻿<!DOCTYPE HTML>
+<html lang="ja">
+<head>
+	<title>Stico</title>
+	<meta charset="UTF-8">
+	<style>
+
+	::selection {
+		background-color: #f00;
+	}
+
+	a {
+		color: #000;
+	}
+
+	svg {
+		-webkit-user-select: none;
+	}
+
+	#canvas {
+		width: 600px;
+		margin: 0 auto 0 auto;
+		position: relative;
+	}
+
+	#textInput {
+		/*width: 1px;
+		height: 1px;*/
+		position: absolute;
+		left: 20px;
+		top: 20px;
+		-webkit-user-modify: read-write-plaintext-only;
+		-webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+		z-index: 1;
+		outline: none;
+		background-color: rgba(255, 255, 255, 0.95);
+	}
+
+	.blink {/*使える！*/
+		-webkit-animation: anime1 0.55s ease -1s infinite alternate;
+	}
+	@-webkit-keyframes anime1 {
+		0% {opacity: 0;}
+		40% {opacity: 0;}
+		90% {opacity: 1;}
+		100% {opacity: 1;}
+	}
+
+	</style>
+</head>
+<body>
+
+	<div style="display: none">
+		Font : <input type="text" value="font!">
+		Color : <input type="text" value="c">
+		Back : <input type="text" value="c">
+		|
+		<span onclick="stc.execute({op: 'tagging', tag: 'align', value: 0});">Left</span>
+				Center Right
+		|
+		Indent Unindent
+		|
+		Bold Italic Underline StrikeThrough Superscript Subscript
+		|
+		ClearFormat
+		|
+	</div>
+
+	<div id="canvas">
+		<div id="textInput"></div>
+	</div>
+
+	<div>powered by <a href="http://www.svgjs.com/">SVG.js</a></div>
+	<div>Stico will only works in Google Chrome.</div>
+
+
+	<span id="ruler" style="visibility:hidden;position:absolute;white-space:nowrap;"></span>
+
+<script src="./svg.js"></script>
+
+<script type="text/javascript">
+
+
+// svg.jsのleadingデフォルト値を"1.0em"にする
+(function() {
+	var oldSVGText = SVG.Text;
+	SVG.Text = function() {
+		this.constructor.call(this, SVG.create('text'))
+
+		/* define default style */
+		this.styles = {
+			'font-size':    16
+		, 'font-family':  'Helvetica, Arial, sans-serif'
+		, 'text-anchor':  'start'
+		}
+
+		this._leading = new SVG.Number('1.0em')
+		this._rebuild = true
+	};
+	SVG.Text.prototype = oldSVGText.prototype;
+})();
+
+
+(function() {
+	var canvas = document.createElement("canvas");
+	var context = canvas.getContext("2d");
+	var ruler = document.getElementById("ruler");
+	var letterSpacing = 0;
+
+	ruler.textContent = "0";
+
+	strWidth = function(str) {
+		if (str === "") {
+			return 0;
+		}
+		return context.measureText(str).width + (str.length - 1) * letterSpacing;
+	};
+
+	strWidth2 = function(str) {	// 使えない
+		ruler.textContent = str;
+		ruler.style.width = null;	// リフローが起きない！
+		var width = ruler.offsetWidth;
+		ruler.textContent = "0";
+		return width;
+	};
+
+	strHeight = function() {
+		return ruler.offsetHeight;
+	};
+
+	setStrWidthFont = function(font, size, bold, italic, letterSpace) {
+		// キャンバスのcontextのフォント設定
+		if (bold) {
+			if (italic) {
+				context.font = "bold italic " + size + " " + font;
+			} else {
+				context.font = "bold " + size + " " + font;
+			}
+		} else {
+			if (italic) {
+				context.font = "italic " + size + " " + font;
+			} else {
+				context.font = size + " " + font;
+			}
+		}
+		letterSpacing = letterSpace;
+
+		ruler.style.fontFamily = font;
+		ruler.style.fontSize = size;
+		//ruler.style.fontWeight = style.bold ? "bold" : "normal";
+		//ruler.style.fontStyle = style.italic ? "italic" : "normal";
+		//ruler.style.letterSpacing = style.letterspace + "pt";
+	};
+
+	setStrWidthFont("MS Gothic", "20pt", {letterSpace: 0});
+})();
+
+var draw = SVG('canvas').size("600", "800").viewbox(0, 0, 600, 800);
+
+// 背景　これがないとsvgの領域がわからない
+draw.rect(600, 800).style("fill", "#ddd");
+
+///////////////////////////////////////////////////////////
+
+var stico = function(svg, x, y, width, height) {
+
+svg = svg.nested().move(x, y).size(width, height);
+
+var back = svg.rect(width, height).fill("#FFF"),	// 編集エリアの背景
+cover = svg.rect(width, height).fill("#FFF").opacity(0).style("cursor", "text"),	// マウスダウンを受け取るためのrect
+caret = svg.rect(2, 16).style("fill", "#111").hide(),//.attr('class', 'blink');
+paragraphs = [{styles: [], text: ""}],	// TODO
+svgParagraphs = null,
+selectionBullet = null,
+selection = [],
+selectionStart = null,	// anchor
+selectionEnd = null,	// focus TODO	デフォルトでnullにしないことにする？
+caretX = 0, // キャレットの本来のx座標 上下移動に使う
+editable = false,
+editinput = null,
+inputing = false,	// ユーザー入力中のフラグ UNDO/REDOのため
+clipboard = null,
+operations = [],
+operationIndex = 0,
+stc;
+
+
+var copyObject = function(obj) {
+	var ret = {};
+	for (var it in obj) {
+		ret[it] = obj[it];
+	}
+	return ret;
+};
+var deepCopyObject = function(obj) {
+	if (obj instanceof Array) {
+		return obj.map(deepCopyObject);
+	} else if (obj instanceof Object) {
+		var ret = {};
+		for (var it in obj) {
+			ret[it] = deepCopyObject(obj[it]);
+		}
+		return ret;
+	} else {
+		return obj;
+	}
+};
+
+var Context = function(psOrCtx) {
+	if(psOrCtx instanceof Context) {	// copy
+		/*this.state = {};
+		for(var e in psOrCtx.state) {
+			this.state[e] = psOrCtx.state[e];
+		}*/
+		this.textState = deepCopyObject(psOrCtx.textState);
+		this.paragraphState = deepCopyObject(psOrCtx.paragraphState);
+		this.paragraphs = psOrCtx.paragraphs;
+		this.paragraphIndex = psOrCtx.paragraphIndex;
+		this.styleIndex = psOrCtx.styleIndex;
+		this.letterIndex = psOrCtx.letterIndex;
+		this.totalLetterIndex = psOrCtx.totalLetterIndex;
+		this.paragraph = psOrCtx.paragraph;
+	} else {	// new
+		this.paragraphs = psOrCtx;
+		this.initial();
+	}
+};
+Context.prototype.nextParagraph = function() {
+	if (!this.paragraphs[this.paragraphIndex + 1]) {	// これ以上パラグラフないよ
+		return false;
+	}
+	this.nextLetter(this.paragraph.text.length - this.letterIndex + 1);
+	return true;
+};
+Context.prototype.prevParagraph = function() {
+	if (this.paragraphIndex === 0) {	// これ以上パラグラフないよ
+		return false;
+	}
+	this.nextLetter(- this.letterIndex - 1);
+	return true;
+};
+Context.prototype.nextStyle = function() {
+	if (!this.paragraph.styles[this.styleIndex]) {	// これ以上スタイルないよ
+		return false;
+	}
+	this.nextLetter(this.paragraph.styles[this.styleIndex].position - this.letterIndex);
+	return true;
+};
+Context.prototype.prevStyle = function() {
+	if (this.styleIndex === 0) {	// これ以上スタイルないよ
+		return false;
+	}
+	this.nextLetter(this.letterIndex - this.paragraph.styles[this.styleIndex - 1].position - 1);
+	return true;
+};
+Context.prototype.nextLetter = function(i) {
+	(i === undefined) && (i = 1);
+	if (0 < i) {	// forward
+		while (true) {
+						// 次のスタイル
+			while (this.paragraph.styles.length !== this.styleIndex && this.paragraph.styles[this.styleIndex].position <= this.letterIndex + i) {
+				this.applyTextTag(this.paragraph.styles[this.styleIndex++]);
+			}
+
+			if (this.paragraph.text.length < this.letterIndex + i) {	// 次のパラグラフへ
+				if (this.paragraphs.length === this.paragraphIndex + 1) {	// 次のパラグラフはないよ
+					this.letterIndex = this.paragraph.text.length;
+					this.totalLetterIndex += this.paragraph.text.length - this.letterIndex + i;
+					return;
+				}
+				i -= this.paragraph.text.length - this.letterIndex + 1;	// TODO +1 ?
+				this.totalLetterIndex += this.paragraph.text.length - this.letterIndex + 1;
+				this.paragraph = this.paragraphs[++this.paragraphIndex];
+				this.applyParagraphTag(this.paragraph);
+				this.styleIndex = 0;
+				if (this.paragraph.styles[this.styleIndex] !== undefined && this.paragraph.styles[this.styleIndex].position === 0) {
+					this.applyTextTag(this.paragraph.styles[this.styleIndex++]);
+				}
+				this.letterIndex = 0;
+			} else {
+				this.letterIndex += i;
+				this.totalLetterIndex += i;
+				break;
+			}
+		}
+	} else if (i < 0) {	// backward
+		while (true) {
+						// 次のスタイル
+			while (this.styleIndex !== 0 && this.letterIndex + i < this.paragraph.styles[this.styleIndex - 1].position) {
+				this.unapplyTextTag(this.paragraph.styles[--this.styleIndex]);
+			}
+
+			if (this.letterIndex + i < 0) {	// 前のパラグラフへ
+				if (this.paragraphIndex === 0) {	// 前のパラグラフはないよ
+					this.letterIndex = 0;
+					this.totalLetterIndex = 0;
+					return;
+				}
+				i += this.letterIndex + 1;	// TODO +1 ?
+				this.totalLetterIndex -= this.letterIndex + 1;
+				this.unapplyParagraphTag(this.paragraph);
+				this.paragraph = this.paragraphs[--this.paragraphIndex];
+				this.styleIndex = this.paragraph.styles.length;	// ?
+				//(this.paragraph.styles[this.styleIndex].position === 0) &&
+				//	this.applyTextTag(this.paragraph.styles[this.styleIndex++]);
+				this.letterIndex = this.paragraph.text.length;
+			} else {
+				this.letterIndex += i;
+				this.totalLetterIndex += i;
+				break;
+			}
+		}
+	}
+};
+Context.prototype.applyParagraphTag = function(p) {
+	for (var it in p) {
+		switch (it) {
+		case "paragraphspacebefore":
+			p["!" + it] = this.paragraphState.paragraphSpaceBefore;
+			this.paragraphState.paragraphSpaceBefore = p[it];
+			break;
+		case "paragraphspaceafter":
+			p["!" + it] = this.paragraphState.paragraphSpaceAfter;
+			this.paragraphState.paragraphSpaceAfter = p[it];
+			break;
+		case "linespace":
+			p["!" + it] = this.paragraphState.lineSpace;
+			this.paragraphState.lineSpace = p[it];
+			break;
+		case "indent":
+			p["!" + it] = this.paragraphState.indent;
+			this.paragraphState.indent = p[it];
+			break;
+		case "indentspace":
+			p["!" + it] = this.paragraphState.indentSpace;
+			this.paragraphState.indentSpace = p[it];
+			break;
+		case "bullet":
+			p["!" + it] = this.paragraphState.bullet;
+			this.paragraphState.bullet = p[it];
+			break;
+		case "bulletoffsetx":
+			p["!" + it] = this.paragraphState.bulletOffsetX;
+			this.paragraphState.bulletOffsetX = p[it];
+			break;
+		case "bulletfontsize":
+			p["!" + it] = this.paragraphState.bulletFontSize;
+			this.paragraphState.bulletFontSize = p[it];
+			break;
+		case "align":
+			p["!" + it] = this.paragraphState.align;
+			this.paragraphState.align = p[it];
+			break;
+		}
+	}
+};
+Context.prototype.unapplyParagraphTag = function(p) {
+	for (var it in p) {
+		switch (it) {
+		case "paragraphspacebefore":
+			this.paragraphState.paragraphSpaceBefore = p["!" + it];
+			break;
+		case "paragraphspaceafter":
+			this.paragraphState.paragraphSpaceAfter = p["!" + it];
+			break;
+		case "linespace":
+			this.paragraphState.lineSpace = p["!" + it];
+			break;
+		case "indent":
+			this.paragraphState.indent = p["!" + it];
+			break;
+		case "indentspace":
+			this.paragraphState.indentSpace = p["!" + it];
+			break;
+		case "bullet":
+			this.paragraphState.bullet = p["!" + it];
+			break;
+		case "bulletoffsetx":
+			this.paragraphState.bulletOffsetX = p["!" + it];
+			break;
+		case "bulletfontsize":
+			this.paragraphState.bulletFontSize = p["!" + it];
+			break;
+		case "align":
+			this.paragraphState.align = p["!" + it];
+			break;
+		}
+	}
+};
+Context.prototype.applyTextTag = function(s) {
+	for (var it in s) {
+		switch (it) {
+		case "font":
+			s["!" + it] = this.textState.font;
+			this.textState.font = s[it];	// contentから参照？
+			break;
+		case "fontsize":
+			s["!" + it] = this.textState.fontSize;
+			this.textState.fontSize = s[it];
+			break;
+		case "color":
+			s["!" + it] = this.textState.color;
+			this.textState.color = s[it];
+			break;
+		case "bold":
+			s["!" + it] = this.textState.bold;
+			this.textState.bold = !this.textState.bold;
+			break;
+		case "italic":
+			s["!" + it] = this.textState.italic;
+			this.textState.italic = !this.textState.italic;
+			break;
+		case "underline":
+			s["!" + it] = this.textState.underline;
+			this.textState.underline = !this.textState.underline;
+			break;
+		case "strikethrough":
+			s["!" + it] = this.textState.strikeThrough;
+			this.textState.strikeThrough = !this.textState.strikeThrough;
+			break;
+		case "script":
+			s["!" + it] = this.textState.script;
+			this.textState.script = s[it];
+			break;
+		case "letterspace":
+			s["!" + it] = this.textState.letterSpace;
+			this.textState.letterSpace = s[it];
+			break;
+		}
+	}
+};
+Context.prototype.unapplyTextTag = function(s) {
+	for (var it in s) {
+		switch (it) {
+		case "font":
+			this.textState.font = s["!" + it];	// contentから参照？
+			break;
+		case "fontsize":
+			this.textState.fontSize = s["!" + it];
+			break;
+		case "color":
+			this.textState.color = s["!" + it];
+			break;
+		case "bold":
+			this.textState.bold = s["!" + it];
+			break;
+		case "italic":
+			this.textState.italic = s["!" + it];
+			break;
+		case "underline":
+			this.textState.underline = s["!" + it];
+			break;
+		case "strikethrough":
+			this.textState.strikeThrough = s["!" + it];
+			break;
+		case "script":
+			this.textState.script = s["!" + it];
+			break;
+		case "letterspace":
+			this.textState.letterSpace = s["!" + it];
+			break;
+		}
+	}
+};
+Context.prototype.initial = function() {
+	this.paragraphState = {	// TextState, ParagraphState
+		lineSpace: 0,
+		paragraphSpaceBefore: 6,
+		paragraphSpaceAfter: 0,
+		align: 0,
+		indent: 0,	// インデントとかいらねー！
+		indentation: [0],
+		indentSpace: 0,
+		tabSpace: 40,
+		//bulletSize: 10,
+		bulletOffsetX: 20,
+		//bulletOffsetY: 0,
+		bulletFont: "",
+		bulletFontSize: 10,
+		bulletColor: "#000",
+		bulletBacl: null,
+		bullet: "◉",
+	};
+	this.textState = {
+		font: "",
+		fontSize: 10,
+		color: "#000",
+		back: null,
+		bold: false,
+		italic: false,
+		underline: false,
+		strikeThrough: false,
+		script: 0,
+		letterSpace: 0,
+		a: null,
+	};
+	this.paragraphIndex = 0;
+	this.styleIndex = 0;
+	this.letterIndex = 0;
+	this.totalLetterIndex = 0;
+	this.paragraph = this.paragraphs[this.paragraphIndex];
+
+	this.applyParagraphTag(this.paragraph);
+	var s = this.paragraph.styles[this.styleIndex];
+	if (s !== undefined && s.position === 0) {
+		this.applyTextTag(s);
+		this.styleIndex += 1;
+	}
+};
+Context.prototype.end = function() {
+	//while (this.nextParagraph());
+	this.nextLetter(10000000000);	// 適当
+};
+
+// ssの pa < x <= pb を取り出す (非破壊)
+var subStyles = function(ss, pa, pb) {
+	var ssl = ss.length,
+	start = -1,
+	end;
+	for (var i = 0; i < ssl; ++i) {
+		if (pa <= ss[i].position) {	// < ? <= ?
+			start = i;
+			break;
+		}
+	}
+	if (start === -1) {
+		return [];
+	}
+	end = start;
+	while (end !== ssl && ss[end].position < pb) {	// < ? <= ?
+		end += 1;
+	}
+	var ret = [];
+	for (var i = start; i < end; ++i) {
+		var s = copyObject(ss[i]);
+		s.position -= pa;	// position調整
+		ret.push(s);
+	}
+	return ret;
+};
+// ssaの pa から pb までにssbを挿入
+var insertStyles = function(ssa, ssb, pa, pb) {
+	var i = 0,
+	il = ssa.length,
+	ret = [];
+	while (i < il && ssa[i].position <= pa) {
+		ret[i] = copyObject(ssa[i]);
+		i += 1;
+	}
+	for (var j = 0, jl = ssb.length; j < jl; ++j) {
+		var s = copyObject(ssb[j]);
+		s.position += pa;
+		ret.push(s);
+	}
+	while (i < il) {
+		var s = copyObject(ssa[i]);
+		s.position += pb;
+		ret[i] = copyObject(s);
+		i += 1;
+	}
+	return ret;
+};
+var replaceStyles = function(ssa, ssb, pa, pb, pc) {
+	var ssl = ssa.length,
+	start = ssl,
+	end;
+	for (var i = 0; i < ssl; ++i) {
+		if (pa <= ssa[i].position) {	// < ? <= ?
+			start = i;
+			break;
+		}
+	}
+
+	end = start;
+	while (end !== ssl && ssa[end].position < pb) {	// < ? <= ?
+		end += 1;
+	}
+
+	// positionがかぶった時の処理
+	if (end !== ssl && ssa[start].position === ssb[0].position) {
+		// TODO
+	}
+
+	var ret = [];
+	for (var i = start; i < end; ++i) {
+		var s = copyObject(ssa[i]);
+		s.position -= pa;	// position調整
+		ret.push(s);
+	}
+	return ret;
+};
+// removeStyles
+var removeDuplicateStyles = function(ss, ctx) {
+
+};
+
+var copyContent = function(ca, cb) {
+	if (cb.totalLetterIndex < ca.totalLetterIndex) {
+		var tmp = cb;
+		cb = ca;
+		ca = tmp;
+	}
+	var nps = [];
+
+	// 頭のstyle
+	var s = textStateDiff((new Context(paragraphs)).state, ca.state);
+	s.position = 0;
+
+	if (ca.paragraph === cb.paragraph) {	// 一つのパラグラフ内
+		// styles
+		var ss = subStyles(ca.paragraph.styles, ca.letterIndex, cb.letterIndex);
+		ss.unshift(s);
+
+		nps[0] = {styles: ss, text: ca.paragraph.text.substring(ca.letterIndex, cb.letterIndex)};
+	} else {	// 複数のパラグラフにまたがる
+		// 頭paragraph
+		// styles
+		var ss = subStyles(ca.paragraph.styles, ca.letterIndex, Infinity);
+		ss.unshift(s);
+
+		nps[0] = {styles: ss, text: ca.paragraph.text.substring(ca.letterIndex, Infinity)};
+
+		// 中paragraph
+		for (var i = ca.paragraphIndex + 1; i < cb.paragraphIndex; ++i) {
+			nps.push(deepCopyObject(paragraphs[i]));
+		}
+
+		// 尻paragraph
+		var ss = subStyles(ca.paragraph.styles, 0, cb.letterIndex);
+
+		nps.push({styles: ss, text: cb.paragraph.text.substring(0, cb.letterIndex)});
+	}
+	return nps;
+};
+var cutContent = function(ca, cb) {
+	var nps = copyContent(ca, cb);
+	replaceContent(ca, cb, [{styles: [], text: ""}]);
+	return nps;
+};
+var insertContent = function(ca, pps) {
+	if (pps.length === 0) {
+		return;
+	}
+	pps = deepCopyObject(pps);
+	if (pps.length === 1) {	// 一つのパラグラフ内に挿入 [ac] -> [abc]
+		// 挿入位置頭スタイル
+		var cc = new Context(pps);
+
+		var style = textStateDiff(ca.state, cc.state);
+		style.position = 0;
+
+		pps[0].styles.unshift(style);
+
+		// 挿入位置尻スタイル
+		cc.end();
+		var style = textStateDiff(cc.state, ca.state);
+		style.position = pps[0].text.length;
+
+		pps[0].styles.push(style);
+
+
+		insertStyles(ca.paragraph.styles, pps[0].styles, ca.letterIndex, ca.letterIndex + pps[0].text.length);
+
+		// text
+		ca.paragraph.text = ca.paragraph.text.substring(0, ca.letterIndex) + pps[0].text + ca.paragraph.text.substring(ca.letterIndex);
+	} else {	// 複数のパラグラフ挿入	[ad] -> [ab] [cd]
+		// 尻 //
+		var cc = new Context(pps);
+		cc.end();
+
+		var style = textStateDiff(cc.state, ca.state),
+		ppi = pps.length - 1;
+		style.position = pps[ppi].text.length;
+
+		pps[ppi].styles.push(style);
+
+		var ss = subStyles(ca.paragraph.styles, ca.letterIndex, Infinity);
+		pps[ppi].styles = insertStyles(pps[ppi].styles, ss, pps[ppi].text.length, pps[ppi].text.length + ca.paragraph.text.length - ca.letterIndex);
+
+		pps[ppi].text += ca.paragraph.text.substring(ca.letterIndex);
+
+		paragraphs.splice(ca.paragraphIndex + 1, 0, pps[ppi]);
+		ppi -= 1;
+
+		// 中 //
+		while (0 < ppi) {
+			paragraphs.splice(ca.paragraphIndex + 1, 0, pps[ppi]);
+			ppi -= 1;
+		}
+
+		// 頭 //
+		// 挿入位置頭スタイル
+		cc.initial();
+
+		style = textStateDiff(ca.state, cc.state);
+		style.position = 0;
+
+		pps[0].styles.unshift(style);
+
+		ca.paragraph.styles = subStyles(ca.paragraph.styles, 0, ca.letterIndex);
+		ca.paragraph.styles = insertStyles(ca.paragraph.styles, pps[0].styles, ca.letterIndex, ca.letterIndex + pps[0].text.length);
+
+		// text
+		ca.paragraph.text = ca.paragraph.text.substring(0, ca.letterIndex) + pps[0].text;//  + ca.paragraph.text.substring(ca.letterIndex)
+	}
+};
+var replaceContent = function(ca, cb, pps) {
+	if (cb.totalLetterIndex < ca.totalLetterIndex) {
+		var tmp = cb;
+		cb = ca;
+		ca = tmp;
+	}
+	cutContent(ca, cb);
+	insertContent(ca, pps);
+};
+var replaceContent = function(ca, cb, pps) {
+	if (cb.totalLetterIndex < ca.totalLetterIndex) {
+		var tmp = cb;
+		cb = ca;
+		ca = tmp;
+	}
+
+	if (ca.paragraphIndex === cb.paragraphIndex) {	// 選択範囲 がパラグラフをまたがらない
+		if (pps.length === 1) {	// コンテンツ のパラグラフが単一
+			ca.paragraph
+		} else {	// コンテンツ のパラグラフが複数
+
+		}
+	} else {	// 選択範囲 がパラグラフをまたがる
+		if (pps.length === 1) {	// コンテンツ のパラグラフが単一
+
+		} else {	// コンテンツ のパラグラフが複数
+
+		}
+	}
+};
+
+var textStateDiff = function(sa, sb) {
+	var style = {};
+
+	if (sb.font !== sa.font)
+		style.font = sb.font;
+	if (sb.fontSize !== sa.fontSize)
+		style.fontsize = sb.fontSize;
+	if (sb.color !== sa.color)
+		style.color = sb.color;
+	if (sb.back !== sa.back)
+		style.back = sb.back;
+	if (sb.bold !== sa.bold)
+		style.bold = 1;
+	if (sb.italic !== sa.italic)
+		style.italic = 1;
+	if (sb.underline !== sa.underline)
+		style.underline = 1;
+	if (sb.strikeThrough !== sa.strikeThrough)
+		style.strikethrough = 1;
+	if (sb.script !== sa.script)
+		style.script = sb.script;
+	if (sb.letterSpace !== sa.letterSpace)
+		style.letterspace = sb.letterSpace;
+
+	return style;
+};
+
+var paragraphStateDiff = function(sa, sb, prg) {
+	if (sb.paragraphspacebefore !== sa.paragraphspacebefore)
+		prg.paragraphSpaceBefore = sb.paragraphspacebefore;
+	if (sb.paragraphspaceafter !== sa.paragraphspaceafter)
+		prg.paragraphSpaceAfter = sb.paragraphspaceafter;
+	if (sb.align !== sa.align)
+		prg.align = sb.align;
+	if (sb.indent !== sa.indent)
+		prg.indent = sb.indent;
+	if (sb.indentspace !== sa.indentspace)
+		prg.indentSpace = sb.indentspace;
+	if (sb.bulletoffsetx !== sa.bulletoffsetx)
+		prg.bulletOffsetX = sb.bulletoffsetx;
+	if (sb.bulletfont !== sa.bulletfont)
+		prg.bulletFont = sb.bulletfont;
+	if (sb.bulletfontsize !== sa.bulletfontsize)
+		prg.bulletFontSize = sb.bulletfontsize;
+	if (sb.bulletcolor !== sa.bulletcolor)
+		prg.bulletColor = sb.bulletcolor;
+	if (sb.bullet !== sa.bullet)
+		prg.bullet = sb.bullet;
+};
+
+var replaceText = function(text) {
+	if (selectionStart === null) {
+		return false;
+	}
+	if (selectionEnd === null) {	// 挿入
+		selectionStart.paragraph.text = selectionStart.paragraph.text.substring(0, selectionStart.letterIndex) + text + selectionStart.paragraph.text.substring(selectionStart.letterIndex);
+		for (var i = selectionStart.styleIndex; i < selectionStart.paragraph.styles.length; ++i) {
+			selectionStart.paragraph.styles[i].position += text.length;
+		}
+		selectionStart.nextLetter(text.length);
+	} else {	// 置換
+		var sa, sb;
+		if (selectionStart.totalLetterIndex <= selectionEnd.totalLetterIndex) {
+			sa = selectionStart;
+			sb = selectionEnd;
+		} else {
+			sa = selectionEnd;
+			sb = selectionStart;
+		}
+		if (sa.paragraph === sb.paragraph) {	// 一つのparagraph内である
+			// 追加するスタイル
+			var style = textStateDiff(sa.state, sb.state);
+			style.position = sa.letterIndex + text.length;
+
+			var si = 0;	// ここまでいらないスタイル
+			while (sa.paragraph.styles[si] !== undefined && sa.paragraph.styles[si].position <= sb.letterIndex) {
+				si += 1;
+			}
+			console.log("si = " + si + "\n si? = " + sb.styleIndex);	// TODO
+			// 残りのスタイルのposition調整
+			for (var i = si; i < sa.paragraph.styles.length; ++i) {
+				sa.paragraph.styles[i].position += sa.letterIndex - sb.letterIndex + text.length;
+			}
+			// styles変更
+			sa.paragraph.styles.splice(sa.styleIndex, si - sa.styleIndex, style);
+			// text変更
+			sa.paragraph.text = sa.paragraph.text.substring(0, sa.letterIndex) + text + sa.paragraph.text.substring(sb.letterIndex);
+
+			sa.letterIndex += text.length;
+
+			selectionStart = sa;
+			selectionEnd = null;
+		} else {	// paragraphをまたがってる
+			// パラグラフstate
+			var sc = new Context(sb);
+			if (sc.nextParagraph()) {
+				paragraphStateDiff(sa.state, sc.state, sc.paragraph);
+			}
+
+			// 追加するスタイル
+			var style = textStateDiff(sa.state, sb.state);
+			style.position = sa.letterIndex + text.length;
+
+			// 残りのスタイルのposition調整
+			//for (var i = si; i < sa.paragraph.styles.length; ++i) {
+			//	sa.paragraph.styles[i].position += sa.letterIndex - sb.letterIndex + text.length;
+			//}
+
+			// styles変更
+			sa.paragraph.styles.length = sa.styleIndex;
+			sa.paragraph.styles[sa.styleIndex] = style;
+
+			for (var i = sb.styleIndex, len = sb.paragraph.styles.length; i < len; ++i) {
+				var s = sb.paragraph.styles[i];	// FIXME oh再利用
+				s.position += sa.letterIndex + text.length - sb.letterIndex;
+				sa.paragraph.styles.push(s);
+			}
+
+			// text変更
+			sa.paragraph.text = sa.paragraph.text.substring(0, sa.letterIndex) + text + sb.paragraph.text.substring(sb.letterIndex);
+
+			// いらないパラグラフ消す
+			paragraphs.splice(sa.paragraphIndex + 1, sb.paragraphIndex - sa.paragraphIndex);
+
+			sa.letterIndex += text.length;
+
+			selectionStart = sa;
+			selectionEnd = null;
+		}
+	}
+	drawContent();
+	drawSelection();
+	return true;
+};
+
+var paragraphTagging = function(prg, style) {
+
+};
+
+var tagging = function(ca, cb, style) {
+	if (ca === null) {
+		return;
+	}
+	if (cb === null) {	// 非範囲選択
+		// textTag // ...は非範囲選択なので無効
+
+		// paragraphTag //
+		var np = paragraphs[ca.paragraphIndex + 1];
+		if (np !== undefined) {	// 次のパラグラフが存在するのでスタイルを戻すこと
+			//paragraphStateDiff(ca)
+		}
+		paragraphTagging(ca.paragraph, style);	// FIXME あかん
+
+		paragraphStateDiff(ca.paragraph, style, ca.paragraph)
+
+
+	} else {	// 範囲選択
+		// textTag //
+
+		// paragraphTag //
+		var pa, pb;
+		if (ca.totalLetterIndex <= cb.totalLetterIndex) {
+			pa = ca.paragraphIndex;
+			pb = cb.paragraphIndex;
+		} else {
+			pa = cb.paragraphIndex;
+			pb = ca.paragraphIndex;
+		}
+		while (pa <= pb) {
+			paragraphs[pa]
+			pa += 1;
+		}
+	}
+};
+
+var taggingParagraph = function(ca, cb, style) {
+	var unstyle = [];	// UNDOのためのスタイル群
+
+	var ctx = new Context(ca);
+
+	//for (ctx.paragraphIndex <= cb.paragraphIndex) {
+
+		//ctx.nextParagraph();
+	//}
+
+	return unstyle;
+};
+
+var taggingText = function(ca, cb, style) {
+	var unstyle = [];	// UNDOのためのスタイル群
+
+	return unstyle;
+};
+
+var posToTpos = function(dx, dy) {  // TODO タブを捉える
+	var context = new Context(paragraphs);
+	for (var i = 0; i < svgParagraphs.length; ++i) {
+		var prg = svgParagraphs[i];
+		if (prg.y + prg.height < dy) {
+			context.nextParagraph();
+			continue;
+		}
+		for (var j = 0; j < prg.lines.length; ++j) {
+			var ln = prg.lines[j];
+			if (prg.y + ln.y + ln.height < dy) {
+				continue;
+			}
+			for (var k = 0; k < ln.texts.length; ++k) {
+				var txt = ln.texts[k];
+				if (prg.x + ln.x + txt.x + txt.width < dx) {
+					continue;
+				}
+
+				var l;
+
+				context.nextLetter(txt.textStart);
+				setStrWidthFont(context.textState.font, getRfs(context.textState) + "pt", context.textState.bold, context.textState.italic, context.textState.letterSpace);
+				// 二分探索
+				var min = txt.textStart, max = txt.textEnd;
+				do {
+					l = ~~((max + min) / 2);
+					var sw = strWidth(context.paragraph.text.substring(txt.textStart, l));
+					if (prg.x + ln.x + txt.x + sw <= dx) {
+						min = l + 1;
+					} else {
+						max = l;
+					}
+				} while (min < max);
+				l = min - 1;
+
+				sw = strWidth(context.paragraph.text.substring(txt.textStart, l));
+				var lw = strWidth(context.paragraph.text.substring(l, l + 1));
+				if (prg.x + ln.x + txt.x + sw + lw / 2 <= dx) {
+					l += 1;
+				}
+
+				context.nextLetter(l - txt.textStart);
+				return context;
+			}
+			// 行は捉えた FIXME styleがおかしい
+			context.nextLetter(ln.texts[ln.texts.length - 1].textEnd);
+			return context;
+		}
+		// パラグラフは捉えた
+		context.nextLetter(prg.lines[prg.lines.length - 1].texts[prg.lines[prg.lines.length - 1].texts.length - 1].textEnd);
+		alert("ここにはこないはず・・・");
+		return context;
+	}
+	// パラグラフすら捉えられなかった...
+	context.end();
+
+	return context;
+};
+
+
+var lastTypedTime = new Date().getTime();	// オペレーション統合に使う
+var drag = null;
+cover.on("mousedown", function(e) {
+	if (!editable || e.button !== 0) {
+		e.preventDefault();
+		return;
+	}
+
+	selectionStart = posToTpos(e.offsetX - x, e.offsetY - y);
+	selectionEnd = null;
+
+	drawSelection();
+	drag = 1;
+	e.preventDefault();
+});
+//window.addEventListener(
+cover.on("mousemove", function(e) {
+	if (drag === null) {
+		return;
+	}
+
+	selectionEnd = posToTpos(e.offsetX - x, e.offsetY - y);
+
+	// startとendが同じなら endはnull
+	if (selectionStart.totalLetterIndex === selectionEnd.totalLetterIndex) {
+		selectionEnd = null;
+	}
+
+	drawSelection();
+});
+window.addEventListener("mouseup", function(e) {
+	if (drag === null) {
+		return;
+	}
+	drag = null;
+});
+
+var inputState = 0;
+var onkeydown = function(e) {
+	//console.dir(e);
+
+	if (inputState === 2 && e.keyCode === 16) {	// 日本語入力確定
+		replaceText(editinput.textContent);
+		editinput.textContent = "";
+		inputState = 0;
+		e.preventDefault();
+		return;
+	}
+
+	if (e.keyCode === 229) {	// 日本語入力っぽい
+		inputState = 2;
+		return;
+	}
+
+	var ctrlKey = (e.ctrlKey && !e.metaKey) || (!e.ctrlKey && e.metaKey);
+	if (!ctrlKey && !e.shiftKey) {
+		switch (e.keyCode) {
+		case 13:	// Return
+			/*if (selectionEnd === null) {
+				insertContent(selectionStart, [{styles: [], text: ""}, {styles: [], text: ""}]);
+			} else {
+				stc.execute({op: "replace", content: [{styles: [], text: ""}, {styles: [], text: ""}]});
+				//replaceContent(selectionStart, selectionEnd, [{styles: [], text: ""}, {styles: [], text: ""}]);
+			}*/
+			stc.execute({op: "replace", content: [{styles: [], text: ""}, {styles: [], text: ""}]});
+			//drawContent();
+			//drawSelection();
+			e.preventDefault();
+			break;
+		case 8:	// BS
+			if (selectionEnd === null) {
+				selectionEnd = new Context(selectionStart);
+				selectionEnd.nextLetter(-1);
+				replaceText("");
+			} else {
+				replaceText("");
+			}
+			e.preventDefault();
+			break;
+		case 46:	// Delete
+			if (selectionEnd === null) {
+				selectionEnd = new Context(selectionStart);
+				selectionEnd.nextLetter(1);
+				replaceText("");
+			} else {
+				replaceText("");
+			}
+			e.preventDefault();
+			break;
+		case 9:	// Tab
+			// TODO
+			// 行をまたぐ範囲選択ならインデント、またがない範囲選択ならタブ挿入
+			// 行頭ならインデント、そうでないならタブ挿入
+			
+			e.preventDefault();
+			break;
+		case 37:	// ←
+			if (selectionStart !== null) {
+				if (selectionEnd !== null) {
+					if (selectionEnd.totalLetterIndex < selectionStart.totalLetterIndex) {
+						selectionStart = selectionEnd;
+					}
+					selectionEnd = null;
+				} else {
+					selectionStart.nextLetter(-1);
+				}
+				drawSelection();
+			}
+			e.preventDefault();
+			break;
+		case 38:	// ↑
+			// TODO
+			e.preventDefault();
+			break;
+		case 39:	// →
+			if (selectionStart !== null) {
+				if (selectionEnd !== null) {
+					if (selectionStart.totalLetterIndex < selectionEnd.totalLetterIndex) {
+						selectionStart = selectionEnd;
+					}
+					selectionEnd = null;
+				} else {
+					selectionStart.nextLetter(1);
+				}
+				drawSelection();
+			}
+			e.preventDefault();
+			break;
+		case 40:	// ↓
+			// TODO
+			e.preventDefault();
+			break;
+		}
+	} else if (ctrlKey && !e.shiftKey) {
+		switch (e.keyCode) {
+		case 65:	// A
+			selectionStart = new Context(paragraphs);
+			selectionEnd = new Context(paragraphs);
+			selectionEnd.end();
+			drawSelection();
+			e.preventDefault();
+			break;
+		case 68:	// D
+			console.dir(paragraphs);
+			e.preventDefault();
+			break;
+		case 90:	// Z
+			stc.undo();
+			e.preventDefault();
+			break;
+		case 89:	// Y
+			stc.redo();
+			e.preventDefault();
+			break;
+		case 88:	// X
+			if (selectionEnd !== null) {
+				clipboard = cutContent(selectionStart, selectionEnd);
+				drawContent();
+				drawSelection();
+			}
+			e.preventDefault();
+			break;
+		case 67:	// C
+			if (selectionEnd !== null) {
+				clipboard = copyContent(selectionStart, selectionEnd);
+				console.dir(copyContent(selectionStart, selectionEnd));
+			}
+			e.preventDefault();
+			break;
+		case 86:	// V
+			if (clipboard !== null) {
+				if (selectionEnd !== null) {
+					replaceContent(selectionStart, selectionEnd, clipboard);
+				} else {
+					insertContent(selectionStart, clipboard);
+				}
+				drawContent();
+				drawSelection();
+			}
+			e.preventDefault();
+			break;
+		}
+	} else if (!ctrlKey && e.shiftKey) {
+		switch (e.keyCode) {
+		case 9:	// Tab
+			e.preventDefault();
+			break;
+		case 13:	// Return
+			if (selectionEnd === null) {
+				insertContent(selectionStart, [{styles: [], text: "\n"}]);
+			} else {
+				replaceContent(selectionStart, selectionEnd, [{styles: [], text: "\n"}]);
+			}
+			drawContent();
+			drawSelection();
+			e.preventDefault();
+			break;
+		case 37:	// ←
+			if (selectionStart !== null) {
+				if (selectionEnd === null) {
+					selectionEnd = new Context(selectionStart);
+				}
+				selectionEnd.nextLetter(-1);
+				drawSelection();
+			}
+			e.preventDefault();
+			break;
+		case 38:	// ↑
+			e.preventDefault();
+			break;
+		case 39:	// →
+			if (selectionStart !== null) {
+				if (selectionEnd === null) {
+					selectionEnd = new Context(selectionStart);
+				}
+				selectionEnd.nextLetter(1);
+				drawSelection();
+			}
+			e.preventDefault();
+			break;
+		case 40:	// ↓
+			e.preventDefault();
+			break;
+		}
+	} else if (ctrlKey && e.shiftKey) {
+
+	}
+
+	inputState = 1;
+};
+var oninput = function() {
+	if (selectionStart === null) {	// 選択されてない！
+		return;
+	}
+	if (inputState === 1) {	// 英数字入力
+		replaceText(editinput.textContent);
+		editinput.textContent = "";
+	} else if (inputState === 2) {	// 日本語入力中なので何もしない
+	} else {
+		editinput.textContent = "";
+	}
+};
+
+
+var getRfs = function(state) {
+	return (state.script !== 0) ? state.fontSize * (2 / 3) : state.fontSize;
+};
+
+// 2つの文字間に改行を挿入することができるか？ ワードラップに使う FIXME
+var breakable = function(a, b) {
+	if (a === " " || b === " ") {
+		return true;
+	}
+	var c = a.charCodeAt(0);
+	if (!((c >= 0x0 && c < 0x81) || (c == 0xf8f0) || (c >= 0xff61 && c < 0xffa0) || (c >= 0xf8f1 && c < 0xf8f4))) {
+		if (",.;:–?!‼、。．)）]}｝〕〉》」』】〙〗〟’”»ヽヾーァィゥェォッャュョヮヵヶぁぃぅぇぉっゃゅょゎ‐〜？！".indexOf(b) !== -1) {	// 行頭にこれは来ない FIXMEなにかおかしい　文字コード？
+			return false;
+		}
+		return true;
+	}
+	var c = b.charCodeAt(0);
+	if (!((c >= 0x0 && c < 0x81) || (c == 0xf8f0) || (c >= 0xff61 && c < 0xffa0) || (c >= 0xf8f1 && c < 0xf8f4))) {
+		if ("（([{｛〔〈《「『【〘〖‘“«".indexOf(a) !== -1) {	// 行末にこれは来ない
+			return false;
+		}
+		return true;
+	}
+	return false;
+};
+
+var escape = function(str) {
+	return str.replace(/>/g, "&gt;").replace(/</g, "&lt;").replace(/\n/g, "<br>");	// <tab>	?
+};
+var unescape = function(str) {
+	return str.replace(/<br>/g, "\n").replace(/&gt;/g, ">").replace(/&lt;/g, "<");
+};
+
+var contextToTpos = function(context) {
+	var prg = svgParagraphs[context.paragraphIndex],
+	li = context.letterIndex;
+	for (var i = 0, il = prg.lines.length; i < il; ++i) {
+		var ln = prg.lines[i];
+		for (var j = 0, jl = ln.texts.length; j < jl; ++j) {
+			var txt = ln.texts[j];
+			if (li <= txt.textEnd) {
+				return {paragraph: context.paragraphIndex, line: i, text: j};
+			}
+		}
+	}
+	return {paragraph: context.paragraphIndex, line: i - 1, text: j - 1};	// XXX
+};
+
+var addParagraph = function() {
+
+};
+
+var drawContent = function() {
+	if (svgParagraphs !== null) {
+		// 前の状態を削除
+		svgParagraphs.forEach(function(e) {
+			if (e.bullet !== null) {
+				e.bullet.remove();
+			}
+			e.text.remove();
+		});
+	}
+	svgParagraphs = [];
+
+	if (paragraphs === null) {
+		return;
+	}
+
+
+	var context = new Context(paragraphs),
+	pstate = context.paragraphState,
+	tstate = context.textState;
+
+	var sx = 0, sy = 0;	// sx -> w
+
+	var prg, ln;
+
+	do {
+		svgParagraphs.push(prg = {
+			lines: [ln = {
+				texts: [],
+				x: 0,
+				y: 0,	// パラグラフ内座標
+				width: 0,
+				height: 0,
+				under: 0	// 
+			}],
+			x: 0,
+			y: 0,
+			height: 0,
+			align: 0,
+			bullet: null
+		});
+
+		sx = 0;
+		sy += pstate.paragraphSpaceBefore;
+
+		prg.x = pstate.indentSpace;
+		prg.y = sy;
+		prg.align = pstate.align;
+
+
+		if (pstate.indent !== 0 && pstate.bullet !== "") {	// バレット始まり
+			setStrWidthFont(pstate.bulletFont, pstate.bulletFontSize + "pt", false, false, 0);
+			var sw = strWidth(pstate.bullet);
+			var sh = strHeight();
+			if (ln.height < sh) {
+				ln.height = sh;
+			}
+			prg.bullet = svg.text(pstate.bullet).font({
+				family:   pstate.bulletFont,
+				size:     pstate.bulletFontSize + "pt"
+			}).style({
+				fill: pstate.bulletColor// TODO
+			});
+			prg.bullet.height = sh;
+		}	// バレット終わり
+
+
+		// 改行計画
+		var context_ = new Context(context);
+
+		var text = context.paragraph.text,
+		maxw = width - prg.x,
+		w = 0,	// 累積width
+		p = 0,	// 文字列の位置
+		fp = 0,	// 確定した文字位置
+		fbp = Infinity,	// 強制改行位置
+		tl = text.length,
+		nlp = text.indexOf("\n"),
+		tbp = text.indexOf("\t"),
+		nsp = (context.paragraph.styles[context.styleIndex] === undefined ? Infinity : context.paragraph.styles[context.styleIndex].position);	// 次のスタイルの文字列位置
+		if (nlp === -1) {
+			nlp = tl;
+		}
+		if (tbp === -1) {
+			tbp = tl;
+		}
+		while (true) {
+			var cp = Math.min(nlp, nsp, tbp, fbp);	// 切り口
+
+			if(p !== cp) {
+				var rfs = (tstate.script !== 0) ? tstate.fontSize * (2 / 3) : tstate.fontSize;
+				setStrWidthFont(tstate.font, rfs + "pt", tstate.bold, tstate.italic, tstate.letterSpace);
+				var sh = strHeight();
+				var sw = strWidth(text.substring(p, cp));
+
+				if (maxw < w + sw) {	// おおっと、はみ出した どこかで改行が必要
+					// 自動改行 二分探索
+					var min = p, max = cp;
+					do {
+						cp = ~~((max + min) / 2);
+						sw = strWidth(text.substring(p, cp));
+						if (w + sw <= maxw) {
+							min = cp + 1;
+						} else {
+							max = cp;
+						}
+					} while (min < max);
+					cp = min - 1;
+
+					// ワードラップ！
+					var ncp = cp;
+					while (fp < ncp && !breakable(text[ncp - 1], text[ncp])) {
+						ncp -= 1;
+					}
+
+					if (ncp === fp) {	// ワードラップしたらこの行にテキストが無くなる		TODO debug
+						if (p === fp) {	// この行にまだテキストがない
+							ncp = p + 1;	// 改行しても意味ないからはみ出してでも一文字表示
+						} else {	// ワードラップは無視せざるを得ない
+							ncp = cp;
+						}
+					}
+
+					cp = ncp;
+
+					if (cp === p) {	// 切るところがない
+						// 強制改行
+						w = 0;
+						fp = p;
+						prg.lines.push(ln = {
+							texts: [],
+							x: 0,
+							y: 0,	// パラグラフ内座標
+							width: 0,
+							height: 0,
+							under: 0
+						});
+						continue;
+					} else if (cp < p) {	// 改行位置が現在位置より前
+						// バックトラック？
+						console.log("改行位置が現在位置より前");
+						context.nextLetter(cp - p);
+						fbp = cp;
+						for (var i = ln.texts.length - 1; 0 <= i; --i) {
+							if (ln.texts[i].textStart < cp) {
+								p = ln.texts[i].textStart;
+								ln.texts.length = i;
+							}	// XXX
+						}
+
+						// 改行
+						w = 0;
+						fp = p;
+						prg.lines.push(ln = {
+							texts: [],
+							x: 0,
+							y: 0,	// パラグラフ内座標
+							width: 0,
+							height: 0,
+							under: 0
+						});
+						continue;
+					}
+					sw = strWidth(text.substring(p, cp));
+				}
+
+				ln.texts.push({
+					textStart: p,
+					textEnd: cp,//(cp === nlp ? cp + 1 : cp),    // 改行も含める
+					x: w,
+					sh: sh,
+					width: sw,	// (cp === nlp ? sw + sh / 2 : sw)
+					script: tstate.script,
+					letterSpace: tstate.letterSpace
+				});
+
+				w += sw + tstate.letterSpace;
+				p = cp;
+			}
+
+			if (p === nsp) {	// style適応
+				context.nextStyle();
+				nsp = context.paragraph.styles[context.styleIndex] === undefined ? Infinity : context.paragraph.styles[context.styleIndex].position;
+			}
+			if (p === tl) {	// 全部終わり！
+				break;
+			}
+			if (p === nlp || p === fbp) {	// テキスト本来の改行 or 強制改行
+				fbp = Infinity;
+				// 改行
+				w = 0;
+				fp = p;
+				prg.lines.push(ln = {
+					texts: [],
+					x: 0,
+					y: 0,	// パラグラフ内座標
+					width: 0,
+					height: 0,
+					under: 0
+				});
+				p += 1;
+				nlp = text.indexOf("\n", p);
+				if (nlp === -1) {
+					nlp = tl;
+				}
+			} else if (p === tbp) {	// タブ
+				w = (~~(w / pstate.tabSpace) + 1) * 40;	// TODO 座標がパラグラフ内の座標だけどいいのかな
+				p += 1;
+				fp = p;
+				tbp = text.indexOf("\t", p);
+				if (tbp === -1) {
+					tbp = tl;
+				}
+			}
+		}
+
+		// 縦位置とか算出
+		var ly = 0;
+		prg.lines.forEach(function(ln) {
+			ln.y = ly;
+			ln.texts.forEach(function(txt) {
+				switch (txt.script) {
+				case -1:
+					ln.under = Math.max(ln.under, txt.sh / 2);
+					ln.height = Math.max(ln.height, txt.sh + ln.under);
+					break;
+				case 0:
+					ln.height = Math.max(ln.height, txt.sh + ln.under);
+					break;
+				case 1:
+					ln.height = Math.max(ln.height, txt.sh + ln.under + txt.sh / 2);
+					break;
+				}
+				ln.width += txt.width;
+			});
+			ly += ln.height + pstate.lineSpace;
+			prg.height += ln.height + pstate.lineSpace;
+		});
+		prg.height -= pstate.lineSpace;
+
+		// svg配置
+		context = context_;
+		pstate = context.paragraphState;
+		tstate = context.textState;
+		prg.text = svg.text(function(add) {
+			prg.lines.forEach(function(ln) {
+				ln.texts.forEach(function(txt, ti) {
+					context.nextLetter(txt.textStart - context.letterIndex);
+					var rfs = (tstate.script !== 0) ? tstate.fontSize * (2 / 3) : tstate.fontSize;
+					var tspan = add.tspan(context.paragraph.text.substring(txt.textStart, txt.textEnd)).style({
+						"font-family": tstate.font,
+						"font-size": rfs + "pt",
+						fill: tstate.color,
+						"font-weight": tstate.bold ? "bold" : "normal",
+						"font-style": tstate.italic ? "italic" : "normal",
+						"text-decoration": tstate.underline ? (tstate.strikeThrough ? "underline line-through" : "underline") : (tstate.strikeThrough ? "line-through" : "none"),
+						"letter-spacing": tstate.letterSpace + "px"
+					});
+					if(ti === 0) {
+						tspan.newLine();
+					}
+					txt.tspan = tspan;
+				});
+			});
+		});
+
+		// バレット位置調整
+		if (prg.bullet !== null) {
+			prg.bullet.move(prg.x - pstate.bulletOffsetX, prg.y).leading(prg.lines[0].height);
+		}
+
+		// パラグラフ位置調整
+		prg.text.move(prg.x, prg.y);
+
+		// tspan位置調整
+		var i = 0,
+		j,
+		dx,
+		dy;
+		prg.lines.forEach(function(ln) {
+			if (ln.texts[0] === undefined) {    // textがない場合もあるかも知れない
+				return;
+			}
+
+			switch (pstate.align) {
+			case 0:
+				ln.x = 0;
+				break;
+			case 1:
+				ln.x = ((width - prg.x) - ln.width) / 2;
+				break;
+			case 2:
+				ln.x = ((width - prg.x) - ln.width);
+				break;
+			}
+			ln.texts[0].tspan.dx(ln.x);
+
+			dx = 0;
+			dy = 0;
+
+			ln.texts.forEach(function(txt, ti) {
+				// txt.dx
+				if (txt.x != dx) {
+					txt.tspan.dx(txt.x - dx);
+				}
+				dx = txt.x + txt.width + txt.letterSpace;
+
+				// txt.dy
+				var rdy;
+				switch (txt.script) {
+				case -1:
+					rdy = ln.height + txt.sh / 2;
+					break;
+				case 0:
+					rdy = ln.height;
+					break;
+				case 1:
+					rdy = ln.height - txt.sh / 2;
+					break;
+				}
+				if (rdy != dy) {
+					txt.tspan.dy(rdy - dy);	
+				}
+				dy = rdy;
+			});
+		});
+
+		prg.width = prg.lines.reduce(function(a, b) {//widthいるのか？
+			return Math.max(a, b.width);
+		}, 0);
+
+		sy = prg.y + prg.height + pstate.paragraphSpaceAfter + pstate.lineSpace;
+	} while(context.nextParagraph());
+
+	cover.front();	// FIXME
+};// FIXME 連続改行 空パラグラフ
+
+var selectionToPos = function(ctx, prg, ln, txt) {
+	var x, y;
+	if (ctx.letterIndex < txt.textStart) {	// tabだ！
+		x = prg.x + ln.x + txt.x - ctx.paragraphState.tabSpace * (txt.textStart - ctx.letterIndex);
+	} else if (txt.textStart === ctx.letterIndex) {
+		x = prg.x + ln.x + txt.x;
+	} else if (txt.textEnd === ctx.letterIndex) {
+		x = prg.x + ln.x + txt.x + txt.width;
+	} else {
+		setStrWidthFont(ctx.textState.font, getRfs(ctx.textState) + "pt", ctx.textState.bold, ctx.textState.italic, ctx.textState.letterSpace);
+		x = prg.x + ln.x + txt.x + strWidth(ctx.paragraph.text.substring(txt.textStart, ctx.letterIndex));
+	}
+
+	y = prg.y + ln.y + 2;	// + 2　は適当
+
+	return {x: x, y: y};
+};
+
+var drawSelection = function() {
+	for (var i = 0, il = selection.length; i < il; ++i) {
+		selection[i].remove();
+	}
+	selection.length = 0;
+
+	if (selectionStart === null) {
+		editinput.blur();
+
+		caret.hide();	
+		return;
+	}
+	if (selectionEnd === null || selectionStart.totalLetterIndex === selectionEnd.totalLetterIndex) {	// キャレット表示
+		var r = contextToTpos(selectionStart),
+		prg = svgParagraphs[r.paragraph],
+		ln = prg.lines[r.line],
+		txt = ln.texts[r.text],
+		cx,
+		cy;
+
+		if (selectionStart.letterIndex < txt.textStart) {	// tabだ！
+			cx = prg.x + ln.x + txt.x - selectionStart.paragraphState.tabSpace * (txt.textStart - selectionStart.letterIndex);
+		} else if (txt.textStart === selectionStart.letterIndex) {
+			cx = prg.x + ln.x + txt.x;
+		} else if (txt.textEnd === selectionStart.letterIndex) {
+			cx = prg.x + ln.x + txt.x + txt.width;
+		} else {
+			setStrWidthFont(selectionStart.textState.font, getRfs(selectionStart.textState) + "pt", selectionStart.textState.bold, selectionStart.textState.italic, selectionStart.textState.letterSpace);
+			cx = prg.x + ln.x + txt.x + strWidth(selectionStart.paragraph.text.substring(txt.textStart, selectionStart.letterIndex));
+		}
+
+		cy = prg.y + ln.y + 2;	// + 2　は適当
+
+		caret.move(cx, cy);
+		caret.attr("height", ln.height);
+		caret.show();
+
+		//*
+		// キャレット点滅させる
+		caret.opacity(1);
+		var f = function() {
+			caret.animate(250, "-", 250).opacity(0).after(function() {
+				caret.animate(250, "-", 250).opacity(1).after(f);
+			});
+		};
+		f();//*/
+
+		editinput.style.left = (svg.attr("x") + cx) + "px";
+		editinput.style.top = (svg.attr("y") + cy) + "px";
+		editinput.focus();
+	} else {	// セレクション表示///////////////////////////////////////////////////////////////////////
+		var sa, sb;
+		if (selectionStart.totalLetterIndex <= selectionEnd.totalLetterIndex) {
+			sa = selectionStart;
+			sb = selectionEnd;
+		} else {
+			sa = selectionEnd;
+			sb = selectionStart;
+		}
+
+		var at = contextToTpos(sa),
+		bt = contextToTpos(sb),
+		prg = at.paragraph,
+		ln = at.line,
+		txt = at.text,
+		sw;
+		var rect = function(w, h, x, y) {
+			var rect = svg.rect(w, h).fill("#3862FF").opacity(0.25);
+			rect.move(x, y);
+			selection.push(rect);
+			cover.before(rect);
+		};
+		if (at.paragraph === bt.paragraph && at.line === bt.line && at.text === bt.text) {	// 一つのtspan内である
+			/*setStrWidthFont(sa.textState.font, getRfs(sa.textState) + "pt", sa.textState.bold, sa.textState.italic, sa.textState.letterSpace);
+			sw = strWidth(sa.paragraph.text.substring(sa.letterIndex, sb.letterIndex));
+			var sw2 = strWidth(sa.paragraph.text.substring(svgParagraphs[prg].lines[ln].texts[txt].textStart, sa.letterIndex));
+			rect(sw, svgParagraphs[prg].lines[ln].height, svgParagraphs[prg].x + svgParagraphs[prg].lines[ln].x + svgParagraphs[prg].lines[ln].texts[txt].x + sw2, svgParagraphs[prg].y + svgParagraphs[prg].lines[ln].y + 2);*/
+			var stpa = selectionToPos(sa, svgParagraphs[prg], svgParagraphs[prg].lines[ln], svgParagraphs[prg].lines[ln].texts[txt]);
+			var stpb = selectionToPos(sb, svgParagraphs[prg], svgParagraphs[prg].lines[ln], svgParagraphs[prg].lines[ln].texts[txt]);
+			//sw = strWidth(sa.paragraph.text.substring(sa.letterIndex, sb.letterIndex));
+			rect(stpb.x - stpa.x, svgParagraphs[prg].lines[ln].height, stpa.x, stpa.y);
+		} else {	// tspanを複数含む
+			// 頭tspan
+			/*
+			setStrWidthFont(sa.textState.font, getRfs(sa.textState) + "pt", sa.textState.bold, sa.textState.italic, sa.textState.letterSpace);
+			sw = strWidth(sa.paragraph.text.substring(sa.letterIndex, svgParagraphs[prg].lines[ln].texts[txt].textEnd));
+			rect(sw, svgParagraphs[prg].lines[ln].height, svgParagraphs[prg].x + svgParagraphs[prg].lines[ln].x + svgParagraphs[prg].lines[ln].texts[txt].x + svgParagraphs[prg].lines[ln].texts[txt].width - sw, svgParagraphs[prg].y + svgParagraphs[prg].lines[ln].y + 2);//*/
+			var stpa = selectionToPos(sa, svgParagraphs[prg], svgParagraphs[prg].lines[ln], svgParagraphs[prg].lines[ln].texts[txt]);
+			var ctx = new Context(sa);
+			ctx.nextLetter(svgParagraphs[prg].lines[ln].texts[txt].textEnd - ctx.letterIndex);
+			var stpb = selectionToPos(ctx, svgParagraphs[prg], svgParagraphs[prg].lines[ln], svgParagraphs[prg].lines[ln].texts[txt]);
+			rect(stpb.x - stpa.x, svgParagraphs[prg].lines[ln].height, stpa.x, stpa.y);
+
+			// 間tspan
+			var next = function() {
+				if (++txt === svgParagraphs[prg].lines[ln].texts.length) {
+					txt = 0;
+					if (++ln === svgParagraphs[prg].lines.length) {
+						ln = 0
+						if (prg + 1 !== svgParagraphs.length) {
+							prg += 1;
+						}
+					}
+				}
+			};
+			next();
+			while (prg !== bt.paragraph || ln !== bt.line || txt !== bt.text) {
+				rect(svgParagraphs[prg].lines[ln].texts[txt].width, svgParagraphs[prg].lines[ln].height, svgParagraphs[prg].x + svgParagraphs[prg].lines[ln].x + svgParagraphs[prg].lines[ln].texts[txt].x, svgParagraphs[prg].y + svgParagraphs[prg].lines[ln].y + 2);
+				next();
+			}
+
+			// 尻tspan
+			prg = bt.paragraph;
+			ln = bt.line;
+			txt = bt.text;
+			/*
+			setStrWidthFont(sb.textState.font, getRfs(sb.textState) + "pt", sb.textState.bold, sb.textState.italic, sb.textState.letterSpace);
+			sw = strWidth(sb.paragraph.text.substring(svgParagraphs[prg].lines[ln].texts[txt].textStart, sb.letterIndex));
+			rect(sw, svgParagraphs[prg].lines[ln].height, svgParagraphs[prg].x + svgParagraphs[prg].lines[ln].x + svgParagraphs[prg].lines[ln].texts[txt].x, svgParagraphs[prg].y + svgParagraphs[prg].lines[ln].y + 2);
+			*/
+			var stpa = selectionToPos(sb, svgParagraphs[prg], svgParagraphs[prg].lines[ln], svgParagraphs[prg].lines[ln].texts[txt]);
+			var ctx = new Context(sb);
+			ctx.nextLetter(svgParagraphs[prg].lines[ln].texts[txt].textStart - ctx.letterIndex);
+			var stpb = selectionToPos(ctx, svgParagraphs[prg], svgParagraphs[prg].lines[ln], svgParagraphs[prg].lines[ln].texts[txt]);
+			rect(stpa.x - stpb.x, svgParagraphs[prg].lines[ln].height, stpb.x, stpb.y);
+		}
+
+		caret.hide();
+		editinput.focus();
+	}
+};
+
+
+stc = {
+	content: function(c) {
+		if (c === undefined) {	// get
+			var fonts = [], colors = [];
+			c = paragraphs.map(function(prg) {
+				var ret = {};
+				for (var it in prg) {
+					switch (it) {
+					case "paragraphspacebefore":
+					case "paragraphspaceafter":
+					case "linespace":
+					case "indent":
+					case "indentspace":
+					case "bulletoffsetx":
+					case "bulletfontsize":
+					case "align":
+						ret[it] = prg[it];
+						break;
+					case "bullet":
+						ret[it] = prg[it];
+						break;
+					}
+				}
+				var p = 0;
+				ret.text = prg.styles.map(function(e) {
+					var ret = escape(prg.text.substring(p, e.position));
+					p = e.position;
+					for (var it in e) {
+						switch (it) {
+						case "font":
+							var i = fonts.indexOf(e[it]);
+							if (i === -1) {
+								i = fonts.length;
+								fonts[i] = e[it];
+							}
+							ret +="<" + it + " " + i + ">";
+							break;
+						case "color":
+							var i = colors.indexOf(e[it]);
+							if (i === -1) {
+								i = colors.length;
+								colors[i] = e[it];
+							}
+							ret +="<" + it + " " + i + ">";
+							break;
+						case "fontsize":
+						case "letterspace":
+						case "script":
+							ret +="<" + it + " " + e[it] + ">";
+							break;
+						case "bold":
+						case "italic":
+						case "underline":
+						case "strikethrough":
+							ret += "<" + it + ">";
+							break;
+						}
+					}
+					return ret;
+				}).join("") + escape(prg.text.substring(p));
+				return ret;
+			});
+			c.unshift(colors);
+			c.unshift(fonts);
+			return JSON.stringify(c);
+		}	// ↓ set
+
+		// 入力をパース
+		var c_ = JSON.parse(c),
+		fonts = c_.shift(),
+		colors = c_.shift();
+		paragraphs = c_;
+
+		var re = new RegExp(/<([^\s>]+)(?:\s(?:"([^\\"]*(?:\\.[^\\"]*)*)"|([^\s>]+)))?>/g),
+		rer,
+		state = {
+			bold: false,
+			italic: false,
+			underline: false,
+			strikethrough: false,
+		};
+		paragraphs.forEach(function(e) {
+			re.lastIndex = 0;
+			var pos = 0,
+			li = 0,
+			si = 0,
+			newText = "";
+			for (var it in e) {
+				switch (it) {
+				case "paragraphspacebefore":
+				case "paragraphspaceafter":
+				case "linespace":
+				case "indent":
+				case "indentspace":
+				case "bulletoffsetx":
+				case "bulletfontsize":
+				case "align":
+					e[it] = +e[it];
+					break;
+				case "bullet":
+					// e[it] = e[it];
+					break;
+				}
+			}
+			e.styles = [{position: 0}];
+			while ((rer = re.exec(e.text)) != null) {
+				if (rer[1] === "br") {
+					continue;
+				}
+				if (rer.index !== li) {
+					var t = unescape(e.text.substring(li, rer.index));
+					newText += t;
+					e.styles[si].position = pos;
+					pos += t.length;
+					e.styles[++si] = {};
+				}
+				li = re.lastIndex;
+				switch (rer[1]) {
+				case "font":
+					e.styles[si][rer[1]] = fonts[rer[3]];
+					break;
+				case "color":
+				case "back":
+					e.styles[si][rer[1]] = colors[rer[3]];
+					break;
+				case "fontsize":
+				case "letterspace":
+				case "bulletoffsetx":
+				case "script":
+					e.styles[si][rer[1]] = +rer[3];
+					break;
+				case "bold":
+				case "italic":
+				case "underline":
+				case "strikethrough":
+					state[rer[1]] = !state[rer[1]];
+					e.styles[si][rer[1]] = state[rer[1]];
+					break;
+				}
+			}
+			newText += unescape(e.text.substring(li));
+			e.styles[si].position = pos;
+			e.text = newText;
+		});
+
+
+		console.dir(paragraphs);
+		//console.log("元");
+		//console.log(c);
+		//console.log("出力");
+		//console.log(arguments.callee());
+
+		drawContent();
+
+		console.dir(svgParagraphs);
+	},
+	edit: function(ei) {
+		if (ei !== undefined) {	// 編集可能にする
+			editinput = ei;
+			editable = true;
+			editinput.onkeydown = onkeydown;    // TODO
+			editinput.oninput = oninput;
+			editinput.onblur = function(e) {
+				stc.blur();
+			};   
+		} else {	// 編集不可能にする
+			editinput = null;
+			editable = false;
+			editinput.onkeydown = null;
+			editinput.oninput = null;
+			editinput.onblur = null;
+		}
+	},
+	execute: function(op) {	// undoable?な操作をする
+		if (!editable) {
+			return false;
+		}
+		var cs, ce;
+		if (selectionEnd === null || selectionStart.totalLetterIndex < selectionEnd.totalLetterIndex) {
+			cs = selectionStart;
+			ce = selectionEnd;
+		} else {
+			cs = selectionEnd;
+			ce = selectionStart;
+		}
+		
+		switch (op.op) {
+		case "replace":    // content (letterIndexStart letterIndexEnd | contextStart contextEnd)
+			/*
+			var cs = op.contextStart,
+			ce = op.contextEnd;
+			if (cs === undefined) {  // contextStartがないのでletterIndexStartとかを利用
+				cs = new Context(paragraphs);
+				cs.nextLetter(op.letterIndexStart);
+				ce = new Context(paragraphs);
+				ce.nextLetter(op.letterIndexEnd);
+			} else {
+				op.letterIndexStart = cs.totalLetterIndex;
+				op.letterIndexEnd = ce.totalLetterIndex;
+				delete op.contextStart;
+				delete op.contextEnd;
+			}*/
+
+			// もしoperationsの最後がinsertであり、lastTypedTimeと今の差が規定の時間以下ならば operationを統合
+			op.letterIndexStart = cs.totalLetterIndex;
+			op.letterIndexEnd = ce.totalLetterIndex;
+						
+			op["!content"] = copyContent(cs, ce);
+			var ctx = new Context(op.content);
+			ctx.end();
+			op.contentLength = ctx.totalLetterIndex;
+			break;
+		case "tagging":
+			op.letterIndexStart = cs.totalLetterIndex;
+			op.letterIndexEnd = ce.totalLetterIndex;
+			break;
+		case "clearFormat":
+			op.letterIndexStart = cs.totalLetterIndex;
+			op.letterIndexEnd = ce.totalLetterIndex;
+			break;
+		}
+
+		operations.length = operationIndex;
+		operations.push(op);
+		stc.redo();
+		
+		return true;
+	},
+	undo: function() {
+		if (operationIndex === 0) {
+			return;
+		}
+		var op = operations[--operationIndex];
+		switch (op.op) {
+		case "replace":
+			selectionStart = new Context(paragraphs);
+			selectionStart.nextLetter(op.letterIndexStart);
+			selectionEnd = new Context(selectionStart);
+			selectionEnd.nextLetter(op.contentLength);
+			replaceContent(op["!content"]);
+			break;
+		case "tagging":
+			selectionStart = new Context(paragraphs);
+			selectionStart.nextLetter(op.letterIndexStart);
+			selectionEnd = new Context(selectionStart);
+			selectionEnd.nextLetter(op.letterIndexEnd - op.letterIndexStart);
+			break;
+		case "clearFormat":
+			selectionStart = new Context(paragraphs);
+			selectionStart.nextLetter(op.letterIndexStart);
+			selectionEnd = new Context(selectionStart);
+			selectionEnd.nextLetter(op.letterIndexEnd - op.letterIndexStart);
+			break;
+		}
+
+		drawContent();
+		drawSelection();
+	},
+	redo: function() {
+		var op = operations[operationIndex];
+		if (op === undefined) {
+			return;
+		}
+		switch (op.op) {
+		case "replace":
+			selectionStart = new Context(paragraphs);
+			selectionStart.nextLetter(op.letterIndexStart);
+			selectionEnd = new Context(selectionStart);
+			selectionEnd.nextLetter(op.letterIndexEnd - op.letterIndexStart);
+			replaceContent(op.content);
+			break;
+		case "tagging":
+			selectionStart = new Context(paragraphs);
+			selectionStart.nextLetter(op.letterIndexStart);
+			selectionEnd = new Context(selectionStart);
+			selectionEnd.nextLetter(op.letterIndexEnd - op.letterIndexStart);
+			break;
+		case "clearFormat":
+			selectionStart = new Context(paragraphs);
+			selectionStart.nextLetter(op.letterIndexStart);
+			selectionEnd = new Context(selectionStart);
+			selectionEnd.nextLetter(op.letterIndexEnd - op.letterIndexStart);
+			break;
+		}
+		operationIndex += 1;
+
+		drawContent();
+		drawSelection();
+	},
+	focus: function() {	// いる？
+	},
+	blur: function() {	// いる？
+		caret.hide();
+		if (editinput !== null) {
+			editinput.blur();
+		}
+	},
+	resize: function(x_, y_, width_, height_) {
+		x = x_;
+		y = y_;
+		width = width_;
+		height = height_;
+
+		svg.move(x, y).size(width, height);
+
+		back.size(width, height);
+		cover.size(width, height);
+
+		drawContent();
+		drawSelection();
+	}
+};
+
+return stc;
+};
+
+
+///////////////////////////////////////////////////////////
+
+var stc = stico(draw, 40, 10, 520, 780);
+stc.content('[["Arial","\\\"MS Gothic\\\"","Osaka","Sans-serif"],["#000","#F00","#0F0","#00F"],{"paragraphspacebefore":3,"text":"<font 1><fontsize 15><color 1>あ<color 2>い<color 3>う<strikethrough><underline>\\t<color 1>あ\\t<color 2>い\\t<color 3>う\\t<color 0><strikethrough><underline>\\t\\tあ"},{"text":"<fontsize 8><font 2>ここが　みなとまち？<br>ここが　<fontsize 18><bold><letterspace 16>みなとまち？<letterspace 0><bold><fontsize 8>"},{"indent":1,"indentspace":20,"bullet":"●","bulletfontsize":6,"text":"<font 3><fontsize 11>a"},{"indent":2,"indentspace":40,"text":"a-1"},{"indent":2,"bullet":"-","align":0,"text":"left"},{"indent":2,"align":1,"text":"center<br>It\'s true center!!!"},{"indent":2,"align":2,"text":"right"},{"indent":0,"indentspace":0,"align":0,"text":"10<script 1>10<script 0><br>H<script -1>2<script 0>O<br><fontsize 14>ぎゃあ<script -1>あ<script 0>あ<script 1>あ<script 0>ぁ<script -1>ぁ<script 0>ぁ<script 1>ぁ<script 0>"},{"linespace":0,"text":"<fontsize 11>圏論とは？という問いに一言で答えるとすると、二通りの考え方があります。一つ目としてまず、一部の研究者は<fontsize 18>「圏論とは理論だ」<fontsize 11>と考えています。圏論は理論というと当たり前みたいですが、実は圏の理論を掘り進める研究者や、圏の理論の奥深いところにある結果を使う研究者は数学者の中でも少数なのです。二つ目として、多くの研究者は<fontsize 18>「圏論とは言葉だ」<fontsize 11>と考えています。これは、何かモノの定義が与えられているとき、圏論の考え方を使うとそのモノを別のある特定の言葉で書き直せる、ということです。これは「圏論はモノに別の見方を与える」とも言い換えられます。数学者であっても多くは後者の「言葉」としての圏論の使い方をしています。「モノに別の見方を与える」ことはプログラミングにおいても有用です。モノを色々な視点から見ていくと、二つの異なったモノが似て見えてくることがあります。もしそうなれば片方のモノの問題がもう片方のモノの問題に帰着され、たとえばアルゴリズムにおいてはアルゴリズムを考える手助けになります。また、視点を変える技術を身につけることで、モノの本質を見出しやすくなります。"},{"linespace":0,"text":"<letterspace 0>There are many differences between iOS and Android, but perhaps one of the most noticeable is iOS’ Navigation Group. This control is a fundamental part of iOS and a very useful and easy to implement navigation paradigm. Learn how to handle a navigation aaab<letterspace 10>baa yo<letterspace 0>ur development.<letterspace 0>"},{"indent":0,"bullet":"","text":"end"}]');
+stc.content('[["Arial","\\\"MS Gothic\\\"","Osaka","Sans-serif"],["#000","#F00","#0F0","#00F"],{"paragraphspacebefore":3,"text":"<font 1><fontsize 15><color 1>あ<color 2>い<color 3>う<strikethrough><underline>\\t<color 1>あ\\t<color 2>い\\t<color 3>う\\t<color 0><strikethrough><underline>\\t\\tTab"},{"text":"<fontsize 8><font 2>改行<br>letterspace<fontsize 18><bold><letterspace 16>bcd<letterspace 0><bold><fontsize 8>"},{"indent":1,"indentspace":20,"bullet":"●","bulletfontsize":6,"text":"<font 3><fontsize 11>箇条書き"},{"indent":2,"indentspace":40,"text":"箇条書き"},{"indent":2,"bullet":"-","align":0,"text":"left"},{"indent":2,"align":1,"text":"center<br>It\'s true center!!!"},{"indent":2,"align":2,"text":"right"},{"indent":0,"indentspace":0,"align":0,"text":"10<script 1>10<script 0><br>H<script -1>2<script 0>O<br><fontsize 14>ぎゃあ<script -1>あ<script 0>あ<script 1>あ<script 0>ぁ<script -1>ぁ<script 0>ぁ<script 1>ぁ<script 0>"},{"linespace":0,"text":"<fontsize 11>圏論とは？という問いに一言で答えるとすると、二通りの考え方があります。一つ目としてまず、一部の研究者は<fontsize 18>「圏論とは理論だ」<fontsize 11>と考えています。圏論は理論というと当たり前みたいですが、実は圏の理論を掘り進める研究者や、圏の理論の奥深いところにある結果を使う研究者は数学者の中でも少数なのです。二つ目として、多くの研究者は<fontsize 18>「圏論とは言葉だ」<fontsize 11>と考えています。これは、何かモノの定義が与えられているとき、圏論の考え方を使うとそのモノを別のある特定の言葉で書き直せる、ということです。これは「圏論はモノに別の見方を与える」とも言い換えられます。数学者であっても多くは後者の「言葉」としての圏論の使い方をしています。「モノに別の見方を与える」ことはプログラミングにおいても有用です。モノを色々な視点から見ていくと、二つの異なったモノが似て見えてくることがあります。もしそうなれば片方のモノの問題がもう片方のモノの問題に帰着され、たとえばアルゴリズムにおいてはアルゴリズムを考える手助けになります。また、視点を変える技術を身につけることで、モノの本質を見出しやすくなります。"},{"linespace":0,"text":"<letterspace 0>There are many differences between iOS and Android, but perhaps one of the most noticeable is iOS’ Navigation Group. This control is a fundamental part of iOS and a very useful and easy to implement navigation paradigm. Learn how to handle a navigation aaab<letterspace 10>baa yo<letterspace 0>ur development.<letterspace 0>"},{"indent":0,"bullet":"","text":"end"}]');
+stc.edit(document.getElementById("textInput"));
+//stc.resize(50, 10, 500, 780);
+//stc.resize(60, 10, 480, 780);
+//stc.resize(70, 10, 460, 580);
+
+
+(function() {
+var stcx = 40, stcy = 10, stcw = 520, stch = 780;
+
+var mx = -1, my;
+var resizer = draw.rect(10, 10).move(stcx + stcw, stcy + stch).on("mousedown", function(e) {
+	mx = e.x;
+	my = e.y;
+});
+
+draw.on("mousemove", function(e) {
+	if (mx === -1) {
+		return;
+	}
+	resizer.move(resizer.x() + e.x - mx, resizer.y() + e.y - my);
+	stcw += e.x - mx;
+	stch += e.y - my;
+	stc.resize(stcx, stcy, stcw, stch);
+	mx = e.x;
+	my = e.y;
+});
+
+window.addEventListener("mouseup", function(e) {
+	mx = -1;
+});
+})();
+
+
+</script>
+</body>
+</html>

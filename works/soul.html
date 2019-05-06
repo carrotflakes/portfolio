@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+	<title>Concept Map</title>
+	<meta charset="UTF-8">
+	<style type="text/css">
+	
+	body	{
+		background-color: #FDFDFD;
+		margin: 0px 0px 0px 0px;
+		overflow-y: hidden;
+	}
+
+	td {
+		text-align: left;
+		word-break: break-all;
+		width: 120px;
+		color: #444444;
+	}
+
+	th {
+		width: 120px;
+		color: #444444;
+	}
+
+	#conceptList {
+		float: left;
+		display: block;
+		overflow-y: auto;
+		width: 120px;
+		cursor: default;
+	}
+
+	.conceptListConcept {
+		background-color: #EEEEEE;
+		cursor: pointer;
+	}
+	.conceptListConcept:hover {
+		background-color: #AAAAAA;
+	}
+
+	.conceptListNew {
+		background-color: #EEEEEE;
+		text-align: center;
+		font-weight: bold;
+		cursor: pointer;
+	}
+	.conceptListNew:hover {
+		background-color: #EE4444;
+		color: #FFFFFF;
+	}
+
+	.conceptMapLabel {
+		float: left;
+	}
+
+	.conceptMapButton {
+		float: right;
+		font-size: 9pt;
+		color: #EEEEEE;
+	}
+	.conceptMapButton:hover {
+		color: #000000;
+	}
+
+	#popupMenu {
+		position: absolute;
+		background-color: #FFFFFF;
+		box-shadow: 0px 0px 6px rgba(0, 0, 0, 0.8);
+		display: none;
+	}
+
+	.popupMenuItem {
+		background-color: #FFFFFF;
+	}
+
+	.popupMenuItem:hover {
+		background-color: #EEEEEE;
+	}
+
+	#clipboardAccesser {
+		font-size: 5pt;
+		position: absolute;
+		opacity: 0.0;
+	}
+
+	#textInput {
+		opacity: 0.8;
+		background-color: #FDFDFD;
+		box-shadow: 0px 2px 8px rgba(255, 255, 255, 0.8);
+		position: absolute;
+		visibility: hidden;
+	}
+
+	#copyright {
+		color: rgb(100, 100, 100);
+		font-size: 9pt;
+	}
+
+	</style>
+</head>
+<body>
+
+	<div>
+		<div id="clipboardAccesser" contenteditable="true"></div>
+		<canvas id="canvas1" width="200" height="200"></canvas>
+		<div id="textInput" contenteditable="true"></div>
+	</div>
+	<table id="popupMenu"><tbody></tbody>
+	</table>
+
+	<textarea id="src"></textarea>
+
+	<div id="footer">
+		<hr>
+		<div>
+			【推奨環境という名の開発環境】<br>
+			ブラウザ : Firefox 19くらい, Google Chrome 25くらい
+		</div>
+		<div id="copyright" align="center">
+			© 2013 <a href="https://twitter.com/carrotflakes" target="_blank">Carrotflakes</a>
+		</div>
+	</div>
+
+	<script>
+
+///////////////////////////////////////////////////////////
+
+var textHeight = 12;
+var fontSize = 11;
+var nodeHeight = 13;
+
+var mouseX = 0; // キャンバスから見た座標
+var mouseY = 0;
+
+
+var conceptList = document.getElementById("conceptList");
+var canvas = document.getElementById("canvas1");
+var clipboardAccesser = document.getElementById("clipboardAccesser");
+var textInput = document.getElementById("textInput");
+var popupMenu = document.getElementById("popupMenu");
+
+///////////////////////////////////////////////////////////
+
+// 先頭の空白を削除
+String.prototype.ltrim = function() {
+	return this.replace(/^\s+/, "");
+}
+// 末尾の空白を削除
+String.prototype.rtrim = function() {
+	return this.replace(/\s+$/, "");
+}
+// 先頭および末尾の空白を削除
+String.prototype.trim = function() {
+	return this.replace(/^\s+|\s+$/g, "");
+}
+
+function skipSpace(str) {
+	return str.search(/\S/);
+}
+
+function adjustXY(e) {
+	var rect = canvas.getBoundingClientRect();
+	mouseX = e.clientX - rect.left;
+	mouseY = e.clientY - rect.top;
+};
+
+
+function distance(x, y) {
+	return Math.sqrt(x * x + y * y);
+};
+
+function distanceLinePoint(x0, y0, x1, y1, px, py) {
+	var dx = x1 - x0;
+	var dy = y1 - y0;
+	var a = dx * dx + dy * dy;
+	if(a == 0.0) {
+		return Math.sqrt((x0 - px) * (x0 - px) + (y0 - py) * (y0 - py));
+	}
+	var b = dx * (x0 - px) + dy * (y0 - py);
+	var t = -(b / a);
+	if(t < 0.0) {
+		t = 0.0;
+	} else if(1.0 < t) {
+		t = 1.0;
+	}
+  var x = t * dx + x0;
+  var y = t * dy + y0;
+  return Math.sqrt( (x - px)*(x - px) + (y - py) * (y - py));
+};
+
+function intersect(x0, y0, x1, y1, x2, y2, x3, y3) {
+	var denominator = (x1 - x0) * (y3 - y2) - (y1 - y0) * (x3 - x2);
+	//分母が０の場合平行
+	if(denominator == 0) {
+		return null;
+	}
+	var numeratorR = (y0 - y2) * (x3 - x2) - (x0 - x2) * (y3 - y2);
+	var r = numeratorR / denominator;
+	var numeratorS = (y0 - y2) * (x1 - x0) - (x0 - x2) * (y1 - y0);
+	var s = numeratorS / denominator;
+	//交差しない
+	if(r < 0 || r > 1 || s < 0 || s > 1) {
+		return null;
+	}
+	return {x: x0 + r * (x1 - x0), y: y0 + r * (y1 - y0)};
+}
+
+///////////////////////////////////////////////////////////
+// コンセプトマップ
+
+function ConceptMap(label) {
+	this.label = label;
+	this.nodes = new Array;
+	this.links = new Array;
+};
+
+ConceptMap.prototype.createNode = function(nname) {
+	var n = new Node(nname, this);
+	this.nodes.push(n);
+	return n;
+};
+
+ConceptMap.prototype.createLink = function(llabel, a, b) {
+	if(a.conceptMap != b.conceptMap || a.getLink(b) != null) {
+		return null;
+	}
+	var l = new Link(llabel, a, b);
+	a.links.push(l);
+	b.links.push(l);
+	this.links.push(l);
+	return l;
+};
+
+ConceptMap.prototype.deleteNode = function(node) {
+	var i = this.nodes.indexOf(node);
+	if(i == -1) {
+		return;
+	}
+	this.nodes.splice(i, 1);
+	for(var i = 0, len = node.links.length; i < len; ++i) {
+		this.deleteLink(node.links[0]);
+	}
+};
+
+ConceptMap.prototype.deleteLink = function(link) {
+	var i = this.links.indexOf(link);
+	if(i == -1) {
+		return;
+	}
+	this.links.splice(i, 1);
+	link.a.links.splice(link.a.links.indexOf(link), 1);
+	link.b.links.splice(link.b.links.indexOf(link), 1);
+};
+
+ConceptMap.prototype.toJson = function() {
+	var str = "{\"label\":\"" + this.label + "\",\"nodes\":[";
+
+	for(var i = 0, len = this.nodes.length; i < len; ++i) {
+		var node = this.nodes[i];
+		str += "{\"id\":" + i + ",\"label\":\"" + node.label + "\",\"x\":" + node.x + ",\"y\":" + node.y + ",\"width\":" + node.width + ",\"height\":" + node.height + "}";
+		if(i != len - 1) {
+			str += ",";
+		}
+	}
+
+	str += "],\"links\":[";
+	
+	for(var i = 0, len = this.links.length; i < len; ++i) {
+		var link = this.links[i];
+		str += "{\"id\":" + i + ",\"label\":\"" + link.label + "\",\"a\":" + this.nodes.indexOf(link.a) + ",\"b\":" + this.nodes.indexOf(link.b) + ",\"direction\":" + link.direction + "}";
+		if(i != len - 1) {
+			str += ",";
+		}
+	}
+
+	str += "]}";
+	return str;
+};
+
+
+// ノード
+function Node(label, conceptMap) {
+	this.label = label;
+	this.conceptMap = conceptMap;
+	this.links = new Array;
+
+	this.x = 0;
+	this.y = 0;
+	this.width = 0;
+	this.height = textHeight + 4;
+};
+
+Node.prototype.getLink = function(sc) {
+	var links = this.links;
+	for(var i = 0, len = links.length; i < len; ++i) {
+		if(links[i].a == sc || links[i].b == sc) {
+			return links[i];
+		}
+	}
+	return null;
+};
+
+Node.prototype.getRect = function() {
+	var left = ~~(this.x - this.width / 2);
+	var top = ~~(this.y - this.height / 2);
+	return {left: left - 2, top: top - 2, right: left + this.width + 4, bottom: top + this.height + 4};
+};
+
+// リンク
+function Link(label, a, b) {
+	this.label = label;
+	this.a = a;
+	this.b = b;
+	this.direction = 1;
+
+	this.labelWidth = 0;
+};
+
+Link.prototype.getArrowPosition = function() {
+	var br = this.b.getRect();
+	br.left -= 4;
+	br.top -= 4;
+	br.right += 4;
+	br.bottom += 4;
+	var i;
+	i = intersect(this.a.x, this.a.y, this.b.x, this.b.y, br.left, br.top, br.right, br.top);
+	if(i == null) {
+		i = intersect(this.a.x, this.a.y, this.b.x, this.b.y, br.left, br.top, br.left, br.bottom);
+		if(i == null) {
+			i = intersect(this.a.x, this.a.y, this.b.x, this.b.y, br.left, br.bottom, br.right, br.bottom);
+			if(i == null) {
+				i = intersect(this.a.x, this.a.y, this.b.x, this.b.y, br.right, br.top, br.right, br.bottom);
+				if(i == null) {
+					return null;
+				}
+			}
+		}
+	}
+	return {ax: this.a.x, ay: this.a.y, bx: i.x, by: i.y};
+
+	/*
+	var ar = this.aView.getRect();
+	var br = this.bView.getRect();
+	var wa = 0;
+	if(ar.right < br.left) wa = -1;
+	else if(br.right < ar.left) wa = 1;
+	var ha = 0;
+	if(ar.bottom < br.top) ha = -1;
+	else if(br.bottom < ar.top) ha = 1;
+	if(wa == -1 && ha == -1) return {ax: ar.right, ay: ar.bottom, bx: br.left, by: br.top};
+	else if(wa == 1 && ha == -1) return {ax: ar.left, ay: ar.bottom, bx: br.right, by: br.top};
+	else if(wa == -1 && ha == 1) return {ax: ar.right, ay: ar.top, bx: br.left, by: br.bottom};
+	else if(wa == 1 && ha == 1) return {ax: ar.left, ay: ar.top, bx: br.right, by: br.bottom};
+	else if(wa == -1 && ha == 0) {
+		var y = this.aView.y < this.bView.y ? (ar.bottom + br.top) / 2 : (ar.top + br.bottom) / 2;
+		return {ax: ar.right, ay: y, bx: br.left, by: y};
+	} else if(wa == 1 && ha == 0) {
+		var y = this.aView.y < this.bView.y ? (ar.bottom + br.top) / 2 : (ar.top + br.bottom) / 2;
+		return {ax: ar.left, ay: y, bx: br.right, by: y};
+	} else if(wa == 0 && ha == -1) {
+		var x = this.aView.x < this.bView.x ? (ar.right + br.left) / 2 : (ar.left + br.right) / 2;
+		return {ax: x, ay: ar.bottom, bx: x, by: br.top};
+	} else if(wa == 0 && ha == 1) {
+		var x = this.aView.x < this.bView.x ? (ar.right + br.left) / 2 : (ar.left + br.right) / 2;
+		return {ax: x, ay: ar.top, bx: x, by: br.bottom};
+	} else return null;*/
+};
+
+Node.prototype.reflow = function(ctx) {
+	//if(this.width == 0) {
+		this.width = ctx.measureText(this.label).width + 4;
+	//}
+};
+
+Node.prototype.draw = function(ctx, x, y) {
+	x += ~~(this.x - this.width / 2);
+	y += ~~(this.y - this.height / 2);
+	ctx.lineWidth = 2;
+	ctx.fillStyle = "rgb(255, 255, 255)";
+	ctx.fillRect(x, y, this.width, this.height);
+	if(selectNodes.indexOf(this) != -1) {
+		ctx.strokeStyle = "rgb(200, 60, 60)";
+	} else {
+		ctx.strokeStyle = "rgb(100, 100, 100)";
+	}
+	ctx.strokeRect(x, y, this.width, this.height);
+	ctx.fillStyle = "rgb(32, 32, 32)";
+	ctx.fillText(this.label, x + 2, y + this.height - 2);
+};
+
+Link.prototype.reflow = function(ctx) {
+	//if(this.labelWidth == 0) {
+		this.labelWidth = ctx.measureText(this.label).width;
+	//}
+};
+
+Link.prototype.draw = function(ctx, x, y) {
+	var ap = this.getArrowPosition();
+
+	if(ap != null) {
+		var angle = - Math.atan2(ap.bx - ap.ax, ap.ay - ap.by);
+		var dist = distance(ap.bx - ap.ax, ap.by - ap.ay);
+
+		if(selectNodes.indexOf(this.a) != -1 && selectNodes.indexOf(this.b) != -1) {
+			ctx.strokeStyle = "rgb(200, 60, 60)";
+			ctx.fillStyle = "rgb(200, 60, 60)";
+		} else {
+			ctx.strokeStyle = "rgb(100, 100, 100)";
+			ctx.fillStyle = "rgb(100, 100, 100)";
+		}
+
+		ctx.lineWidth = 2;
+
+		ctx.beginPath();
+		var da = Math.PI / 4;
+		ctx.moveTo(ap.ax + x, ap.ay + y);
+		ctx.lineTo(ap.bx + x, ap.by + y);
+		ctx.stroke();
+		ctx.closePath();
+		ctx.beginPath();
+		ctx.moveTo(ap.bx + Math.sin(angle + da) * 10, ap.by + Math.cos(angle + da) * 10);
+		ctx.lineTo(ap.bx, ap.by);
+		ctx.lineTo(ap.bx + Math.sin(angle - da) * 10, ap.by + Math.cos(angle - da) * 10);
+		ctx.fill();
+		ctx.closePath();
+	}
+
+
+	ctx.fillStyle = "rgb(255, 255, 255)";
+	ctx.fillRect((this.a.x + this.b.x - this.labelWidth) / 2 + x, (this.a.y + this.b.y - textHeight) / 2 + y, this.labelWidth, textHeight);
+	ctx.fillStyle = "rgb(32, 32, 32)";
+	ctx.fillText(this.label, (this.a.x + this.b.x - this.labelWidth) / 2 + x, (this.a.y + this.b.y + textHeight) / 2 + y - 2);
+};
+
+
+Node.prototype.touch = function(x, y) {
+	return this.x - this.width / 2 < x && x < this.x + this.width / 2 && this.y - this.height / 2 < y && y < this.y + this.height / 2;
+};
+
+Link.prototype.touch = function(x, y) {
+	var a = this.a;
+	var b = this.b;
+	var px = (a.x + b.x - this.labelWidth) / 2 + x;
+	var py = (a.y + b.y - textHeight) / 2 + y;
+	return (px < x && x < px + this.labelWidth && py < y && y < py + textHeight) || distanceLinePoint(a.x, a.y, b.x, b.y, x, y) < 5;
+};
+
+Node.prototype.editLabel = function() {
+	var snv = this;
+	beginTextInput(snv.x, snv.y, snv.label, function(text) {
+		snv.label = text;
+		snv.width = 0;
+		reflow();
+		refresh();
+	});
+};
+
+Link.prototype.editLabel = function() {
+	var lv = this;
+	var a = this.a;
+	var b = this.b;
+	var px = (a.x + b.x - this.labelWidth) / 2 + 0;
+	var py = (a.y + b.y - textHeight) / 2 + 0;
+	beginTextInput(px, py, lv.label, function(text) {
+		lv.label = text;
+		lv.labelWidth = 0;
+		reflow();
+		refresh();
+	});
+};
+
+///////////////////////////////////////////////////////////
+
+var currentMap = new ConceptMap("new concept map", null);
+
+var selectNodes = new Array();
+var selectLinks = new Array();
+
+var mouseDownView = null;
+var mouseDownX = -10;
+var mouseDownY = -10;
+var dragMode = -1;
+
+var keyGuard = -1;
+
+
+window.onresize = function() {
+	canvas.width = document.body.clientWidth - 120;//window.innerWidth;
+	canvas.height = window.innerHeight - 200;
+	refresh(true);
+};
+window.onresize();
+
+
+var textInputEndProc = undefined;
+function beginTextInput(x, y, text, endProc) {
+	textInputEndProc = endProc;
+	var rect = canvas.getBoundingClientRect();
+	textInput.style.left = (x + rect.left) + "px";
+	textInput.style.top = (y - 2 + rect.top) + "px";
+	textInput.innerHTML = text;
+	textInput.style.visibility = "visible";
+	textInput.focus();
+	window.getSelection().selectAllChildren(textInput);
+};
+textInput.onblur = function() {
+	var tc = this.textContent;
+	this.style.top = (- 100) + "px";
+	this.style.visibility = "hidden";
+	this.innerHTML = "";
+
+	if(textInputEndProc != undefined) {
+		textInputEndProc(tc);
+	}
+};
+textInput.onkeydown = function(e) {
+	keyGuard = -1;
+	if(e.keyCode == 13 && !e.ctrlKey && !e.shiftKey) {
+		keyGuard = 0;
+		return false;
+	} else if(e.keyCode == 27) {	// esc
+		textInputEndProc = undefined;
+		return false;
+	}
+	return true;
+};
+textInput.onkeyup = function(e) {
+	if(e.keyCode == 13 && !e.ctrlKey && !e.shiftKey) {
+		window.setTimeout(function() {textInput.blur();}, 10);
+	}
+}
+
+
+function reflow() {
+	if(canvas.getContext) {
+		var ctx = canvas.getContext('2d');
+		ctx.font = fontSize + "pt Arial";
+
+		for(var i = 0, len = currentMap.links.length; i < len; ++i) {
+			currentMap.links[i].reflow(ctx);
+		}
+		for(var i = 0, len = currentMap.nodes.length; i < len; ++i) {
+			currentMap.nodes[i].reflow(ctx);
+		}
+	}
+};
+
+function refresh() {
+	if(canvas.getContext) {
+		var ctx = canvas.getContext('2d');
+		ctx.font = fontSize + "pt Arial";
+		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+		for(var i = 0, len = currentMap.links.length; i < len; ++i) {
+			currentMap.links[i].draw(ctx, 0, 0);
+		}
+		for(var i = 0, len = currentMap.nodes.length; i < len; ++i) {
+			currentMap.nodes[i].draw(ctx, 0, 0);
+		}
+
+		ctx.fillStyle = "rgba(32, 32, 32, 0.75)";
+		ctx.fillText(currentMap.label, 3, 15);
+	}
+};
+
+function getTouchNodeView(x, y) {
+	for(var i = 0, len = currentMap.nodes.length; i < len; ++i) {
+		if(currentMap.nodes[i].touch(x, y)) {
+			return currentMap.nodes[i];
+		}
+	}
+	return null;
+}
+
+function getTouchLinkView(x, y) {
+	for(var i = 0, len = currentMap.links.length; i < len; ++i) {
+		if(currentMap.links[i].touch(x, y)) {
+			return currentMap.links[i];
+		}
+	}
+	return null;
+}
+
+canvas.onmousedown = function(e) {
+	dragMode = -1;
+	adjustXY(e);
+	if(e.button == 0) {	// 左釦
+		mouseDownX = mouseX;
+		mouseDownY = mouseY;
+		mouseDownView = getTouchNodeView(mouseX, mouseY);
+		if(mouseDownView != null) {
+			var ti = selectNodes.indexOf(mouseDownView);
+			if(ti == -1) {	// 選択されていない
+				selectNodes.push(mouseDownView);
+				dragMode = 1;
+			} else {	// 選択されている
+				dragMode = 0;
+			}
+		} else {
+			selectNodes.length = 0;
+		}
+		refresh();
+	} else {
+	}
+	return false;
+};
+
+canvas.onmousemove = function(e) {
+	if(dragMode == 0) {
+		adjustXY(e);
+		if(5 < distance(mouseX - mouseDownX, mouseY - mouseDownY)) {
+			dragMode = 1;	// ドラッグ開始
+		}
+	} else if(dragMode == 1) {
+		adjustXY(e);
+		var dx = mouseX - mouseDownX;
+		var dy = mouseY - mouseDownY;
+		selectNodes.map(function (v) {v.x += dx; v.y += dy;});
+		mouseDownX = mouseX;
+		mouseDownY = mouseY;
+		refresh();
+	}
+};
+
+canvas.onmouseup = function(e) {
+	if(dragMode == 0) {
+		if(mouseDownView != null) {
+			selectNodes.splice(selectNodes.indexOf(mouseDownView), 1);
+			refresh();
+		}
+	}
+	dragMode = -1;
+};
+canvas.ondblclick = function(e) {
+	if(mouseDownView != null) {
+		mouseDownView.editLabel();
+	} else {
+		var tv = getTouchLinkView(mouseX, mouseY);
+		if(tv != null) {	// リンクのラベル変更
+			tv.editLabel();
+		} else {
+			var sn = currentMap.createNode("_");
+			sn.x = mouseX;
+			sn.y = mouseY;
+			selectNodes.length = 1;
+			selectNodes[0] = sn;
+			reflow();
+			refresh();
+		}
+	}
+};
+
+document.onkeydown = function(e) {
+	if(document.activeElement === document.body) {
+		//alert(e.keyCode + " " + e.charCode);
+		if(e.keyCode == 8) {	// backspace
+			/*
+			for(var i = 0, len = currentMap.links.length; i < len; ) {
+				if(selectNodes.indexOf(currentMap.links[i].aView) != -1 || selectNodes.indexOf(currentMap.links[i].bView) != -1) {
+					currentMap.links[i].link.a.conceptMap.deleteLink(currentMap.links[i].link);
+					currentMap.links.splice(i, 1);
+					len -= 1;
+				} else {
+					++i;
+				}
+			}
+			for(var i = 0, len = selectNodes.length; i < len; ++i) {
+				selectNodes[i].conceptMap.deleteNode(selectNodes[i]);
+			}
+			selectNodes.length = 0;
+			refresh();*/
+			
+			for(var i = 0, len = selectNodes.length; i < len; ++i) {
+				selectNodes[i].conceptMap.deleteNode(selectNodes[i]);
+			}
+			selectNodes.length = 0;
+			refresh();
+
+			return false;
+		} else if(e.keyCode == 32) {	// space
+			if(selectNodes.length == 0) {
+				var sn = currentMap.createNode("_");
+				sn.x = canvas.width / 2;
+				sn.y = canvas.height / 2;
+				selectNodes.length = 1;
+				selectNodes[0] = sn;
+				reflow();
+				refresh();
+			} else if(selectNodes.length == 1) {
+				var sn = currentMap.createNode("_");
+				sn.x = selectNodes[0].x ;
+				sn.y = selectNodes[0].y + 60;
+				var l = currentMap.createLink("", selectNodes[0], sn);
+				selectNodes[0] = sn;
+				reflow();
+				refresh();
+			}
+			return false;
+		} else if(e.keyCode == 69) {	// e
+			if(e.shiftKey) {
+				for(var i = 0, ilen = currentMap.links.length; i < ilen; ++i) {
+					if(selectNodes.indexOf(currentMap.links[i].a) != -1 && selectNodes.indexOf(currentMap.links[i].b) != -1) {
+						currentMap.deleteLink(currentMap.links[i]);
+						i -= 1;
+						ilen -= 1;
+					}
+				}
+				refresh();
+			} else {
+				if(selectNodes.length == 2) {
+					var l = currentMap.createLink("", selectNodes[0], selectNodes[1]);
+					if(l == null) {
+						return false;
+					}
+					reflow();
+					refresh();
+				}
+				return false;
+			}
+		} else if(e.keyCode == 74) {	// j
+			if(e.shiftKey) {
+				document.getElementById("src").innerHTML = currentMap.toJson();
+			} else {
+				var j = document.getElementById("src").textContent;
+				var json = JSON.parse(j);
+
+				var cm = new ConceptMap(json.label);
+				for(var i = 0, len = json.nodes.length; i < len; ++i) {
+					var n = cm.createNode(json.nodes[i].label, cm);
+					n.x = json.nodes[i].x;
+					n.y = json.nodes[i].y;
+					n.width = json.nodes[i].width;
+					n.height = json.nodes[i].height;
+				}
+				for(var i = 0, len = json.links.length; i < len; ++i) {
+					var l = cm.createLink(json.links[i].label, cm.nodes[json.links[i].a], cm.nodes[json.links[i].b]);
+					l.direction = json.links[i].direction;
+				}
+
+				currentMap = cm;
+				selectNodes.length = 0;
+
+				reflow();
+				refresh();
+			}
+		}
+	}
+	return true;
+};
+document.onkeyup = function(e) {
+	if(document.activeElement === document.body) {
+		if(e.keyCode == 13 && !e.shiftKey) {	// return
+			if(selectNodes.length == 1) {
+				selectNodes[0].editLabel();
+			}
+			return false;
+		}
+	}
+	return true;
+};
+
+
+popupMenu.onblur = function() {
+	popupMenu.style.display = "none";
+};
+
+function newPopupMemuItem() {
+	var td = document.createElement("td");
+	td.className = "popupMenuItem";
+	var tr = document.createElement("tr");
+	tr.appendChild(td);
+	popupMenu.children[0].appendChild(tr);
+	return td;
+};
+newPopupMemuItem().innerHTML = "hogeeeee";
+
+/*
+var v1 = new NodeView(new Node("test", globalMap));
+v1.x = 100;
+v1.y = 100;
+
+var v2 = new NodeView(new Node("test2", globalMap));
+v2.x = 200;
+v2.y = 200;
+
+var v3 = new LinkView(new Link("hoge", v1.node, v2.node), v1, v2);
+
+nodeViews.push(v1);
+nodeViews.push(v2);
+linkViews.push(v3);
+//*/
+
+reflow();
+refresh();
+
+	</script>
+</body>
+</html>

@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+	<title>Concept Map</title>
+	<meta charset="UTF-8">
+	<style type="text/css">
+	
+	body	{
+		margin: 0px 0px 0px 0px;
+		overflow: hidden;
+	}
+
+	#canvas {
+		margin: 10px;
+		width: 600px;
+		height: 400px;
+		background: #fafafa;
+		box-shadow: 0px 0px 3px;
+		position: relative;
+		overflow: hidden;
+		resize: both;
+	}
+
+	#nodeMenu {
+	}
+
+	#linkMenu {
+	}
+
+	.floatMenu {
+		display: none;
+		position: absolute;
+		z-index: 25;
+	}
+
+	.floatMenuItem {
+		width: 24px;
+		height: 24px;
+		padding: 4px;
+		display: table-cell;
+		text-align: center;
+		vertical-align: middle;
+		background: #111;
+		color: #fafafa;
+		opacity: 0.85;
+		border-radius: 3px;
+	}
+	.floatMenuItem:hover {
+		background: #b11;
+	}
+
+	.line {
+		width: 100px;
+		height: 2px;
+		background: #777;
+		position: absolute;
+		z-index: 10;
+		-moz-transform-origin: left center;
+		-webkit-transform-origin: left center;
+	}
+
+	.arrow {
+		width: 100px;
+		height: 2px;
+		background: #777;
+		position: absolute;
+		z-index: 10;
+		-moz-transform-origin: left center;
+		-webkit-transform-origin: left center;
+	}
+
+	.arrow:after {
+		position: absolute;
+		top: -7px;
+		left: 100%;
+		content: " ";
+		border: 8px solid transparent;
+		border-left-color: #777;
+		width: 0;
+		height: 0;
+		z-index: 10;
+	}
+
+	.node {
+		min-height: 16px;
+		min-width: 16px;
+		max-width: 200px;
+		position: absolute;
+		padding: 4px;
+		background: rgba(250, 250, 250, 1);
+		color: #777;
+		text-align: center;
+		border: 2px solid #777;
+		border-radius: 3px;
+		z-index: 20;
+
+		-webkit-animation-name: animation02;
+		-webkit-animation-duration: 0.2s;
+		-webkit-animation-timing-function: ease-out;
+		-webkit-animation-fill-mode: both;
+	}
+
+	@-webkit-keyframes animation02 {
+		from {
+			-webkit-transform: scale(0.0, 0.0);
+		}
+		to{
+			-webkit-transform: scale(1.0, 1.0);
+		}
+	}
+
+	.linkLabel {
+		min-width: 16px;
+		height: 20px;
+		position: absolute;
+		padding: 2px 4px;
+		background: #777;
+		color: #fafafa;
+		border-radius: 12px;
+		text-align: center;
+		line-height: 20px;
+		z-index: 15;
+	}
+
+	#smartBuildInput {
+		top: 30px;
+		left: 100px;
+		min-width: 300px;
+		position: absolute;
+		padding: 4px;
+		display: none;
+		background: rgba(250, 250, 250, 0.8);
+		color: #777;
+		box-shadow: 0px 2px 5px 0px #000;
+		border: 0px;
+		border-radius: 3px;
+		z-index: 50;
+	}
+
+	</style>
+</head>
+<body>
+
+	<div id="canvas">
+		<div id="nodeMenu" class="floatMenu">
+			<div class="floatMenuItem" onclick="linkButton();" title="put a link from this node">
+				→
+			</div>
+			<div class="floatMenuItem" onclick="removeNodeButton();" title="remove this node">
+				×
+			</div>
+		</div>
+		<div id="linkMenu" class="floatMenu">
+			<div class="floatMenuItem" onclick="reverseDirectionButton()" title="reverse direction">
+				↔
+			</div>
+			<div class="floatMenuItem" onclick="nojointButton()" title="stretch link">
+				→
+			</div>
+			<div class="floatMenuItem" onclick="nodalizeButton()" title="change to node">
+				■
+			</div>
+			<div class="floatMenuItem" onclick="removeLinkButton();" title="remove this link">
+				×
+			</div>
+		</div>
+		<input id="smartBuildInput" type="text" value="">
+	</div>
+
+	<div id="status"></div>
+
+	<script>
+
+///////////////////////////////////////////////////////////
+
+var canvas = document.getElementById("canvas");
+var nodeMenu = document.getElementById("nodeMenu");
+var linkMenu = document.getElementById("linkMenu");
+var smartBuildInput = document.getElementById("smartBuildInput");
+
+///////////////////////////////////////////////////////////
+
+function getUrlParameter(key) {
+  var str = location.search.split("?");
+  if (str.length < 2) {
+    return null;
+  }
+  
+  var params = str[1].split("&");
+  for (var i = 0; i < params.length; i++) {
+    var keyVal = params[i].split("=");
+    if (keyVal[0] == key && keyVal.length == 2) {
+      return decodeURIComponent(keyVal[1]);
+    }
+  }
+  return null;
+};
+
+function adjustXY(e) {
+	var rect = canvas.getBoundingClientRect();
+	mouseX = e.clientX - rect.left;
+	mouseY = e.clientY - rect.top;
+};
+
+
+function distance(x, y) {
+	return Math.sqrt(x * x + y * y);
+};
+
+function distanceLinePoint(x0, y0, x1, y1, px, py) {
+	var dx = x1 - x0;
+	var dy = y1 - y0;
+	var a = dx * dx + dy * dy;
+	if(a == 0.0) {
+		return Math.sqrt((x0 - px) * (x0 - px) + (y0 - py) * (y0 - py));
+	}
+	var b = dx * (x0 - px) + dy * (y0 - py);
+	var t = -(b / a);
+	if(t < 0.0) {
+		t = 0.0;
+	} else if(1.0 < t) {
+		t = 1.0;
+	}
+  var x = t * dx + x0;
+  var y = t * dy + y0;
+  return Math.sqrt( (x - px)*(x - px) + (y - py) * (y - py));
+};
+
+function intersect(x0, y0, x1, y1, x2, y2, x3, y3) {
+	var denominator = (x1 - x0) * (y3 - y2) - (y1 - y0) * (x3 - x2);
+	//分母が０の場合平行
+	if(denominator == 0) {
+		return null;
+	}
+	var numeratorR = (y0 - y2) * (x3 - x2) - (x0 - x2) * (y3 - y2);
+	var r = numeratorR / denominator;
+	var numeratorS = (y0 - y2) * (x1 - x0) - (x0 - x2) * (y1 - y0);
+	var s = numeratorS / denominator;
+	//交差しない
+	if(r < 0 || r > 1 || s < 0 || s > 1) {
+		return null;
+	}
+	return {x: x0 + r * (x1 - x0), y: y0 + r * (y1 - y0)};
+}
+
+///////////////////////////////////////////////////////////
+// コンセプトマップ
+
+function ConceptMap(label) {
+	this.label = label;
+	this.nodes = new Array;
+	this.links = new Array;
+	this.newNolId = 0;
+};
+
+ConceptMap.prototype.createNode = function(nname) {
+	var n = new Node(this.newNolId++, nname, this);
+	this.nodes.push(n);
+	return n;
+};
+
+ConceptMap.prototype.createLink = function(llabel, a, b) {	// YOFO同ノード間のリンク重複チェック
+	if(a.conceptMap != b.conceptMap) {
+		return null;
+	}
+	var l = new Link(this.newNolId++, llabel, a, b);
+	a.links.push(l);
+	b.links.push(l);
+	this.links.push(l);
+	return l;
+};
+
+ConceptMap.prototype.removeNode = function(node) {
+	var i = this.nodes.indexOf(node);
+	if(i == -1) {
+		return;
+	}
+	
+	if(node.element != null) {
+		canvas.removeChild(node.element);
+	}
+
+	this.nodes.splice(i, 1);
+	for(var i = 0, len = node.links.length; i < len; ++i) {
+		this.removeLink(node.links[0]);
+	}
+};
+
+ConceptMap.prototype.removeLink = function(link) {
+	var i = this.links.indexOf(link);
+	if(i == -1) {
+		return;
+	}
+
+	if(link.arrowElement != null) {
+		if(link.lineElement != null) {
+			canvas.removeChild(link.lineElement);
+		}
+		canvas.removeChild(link.arrowElement);
+		canvas.removeChild(link.labelElement);
+	}
+
+	this.links.splice(i, 1);
+	link.a.links.splice(link.a.links.indexOf(link), 1);
+	link.b.links.splice(link.b.links.indexOf(link), 1);
+};
+
+ConceptMap.prototype.getNodeById = function(id) {
+	for(var i = 0, len = this.nodes.length; i < len; ++i) {
+		if(this.nodes[i].id == id) {
+			return this.nodes[i];
+		}
+	}
+	return null;
+};
+
+ConceptMap.prototype.getLinkById = function(id) {
+	for(var i = 0, len = this.links.length; i < len; ++i) {
+		if(this.links[i].id == id) {
+			return this.links[i];
+		}
+	}
+	return null;
+};
+
+ConceptMap.prototype.getNodeByLabel = function(label) {
+	for(var i = 0, len = this.nodes.length; i < len; ++i) {
+		if(this.nodes[i].label == label) {
+			return this.nodes[i];
+		}
+	}
+	return null;
+};
+
+ConceptMap.prototype.getNodeByPosition = function(x, y, margin) {
+	if(margin == undefined) {
+		margin = 0;
+	}
+	for(var i = 0, len = this.nodes.length; i < len; ++i) {
+		var rect = this.nodes[i].getRect();
+		if(rect.left - margin < x && x < rect.right + margin && rect.top - margin < y && y < rect.bottom + margin) {
+			return this.nodes[i];
+		}
+	}
+	return null;
+};
+
+ConceptMap.prototype.toJson = function() {
+	var str = "{\"label\":\"" + this.label + "\",\"nodes\":[";
+
+	for(var i = 0, len = this.nodes.length; i < len; ++i) {
+		var node = this.nodes[i];
+		str += "{\"id\":" + node.id + ",\"label\":\"" + node.label + "\",\"x\":" + node.x + ",\"y\":" + node.y + "}";
+		if(i != len - 1) {
+			str += ",";
+		}
+	}
+
+	str += "],\"links\":[";
+	
+	for(var i = 0, len = this.links.length; i < len; ++i) {
+		var link = this.links[i];
+		str += "{\"id\":" + link.id + ",\"label\":\"" + link.label + "\",\"a\":" + link.a.id + ",\"b\":" + link.b.id;
+		if(link.labelLocation != undefined && link.labelLocation != null) {
+			str += ",\"labelLocation\":" + JSON.stringify(link.labelLocation);
+		}
+		str += "}";
+		if(i != len - 1) {
+			str += ",";
+		}
+	}
+
+	str += "],\"newNolId\":" + this.newNolId + "}";
+	return str;
+};
+
+
+// ノード
+function Node(id, label, conceptMap) {
+	this.id = id;
+	this.label = label;
+	this.conceptMap = conceptMap;
+	this.links = new Array;
+
+	this.x = 0;
+	this.y = 0;
+
+	this.element = null;
+};
+
+// このノードとscとのリンクがあればそれを返す
+Node.prototype.getLink = function(sc) {
+	var links = this.links;
+	for(var i = 0, len = links.length; i < len; ++i) {
+		if(links[i].a == sc || links[i].b == sc) {
+			return links[i];
+		}
+	}
+	return null;
+};
+
+Node.prototype.getRect = function() {
+	var left = ~~(this.x - this.element.offsetWidth / 2);
+	var top = ~~(this.y - this.element.offsetHeight / 2);
+	return {left: left, top: top, right: left + this.element.offsetWidth, bottom: top + this.element.offsetHeight};
+};
+
+// リンク
+function Link(id, label, a, b) {
+	this.id = id;
+	this.label = label;
+	this.a = a;
+	this.b = b;
+	//this.direction = 1;
+	this.labelLocation = null;
+
+	this.lineElement = null;
+	this.arrowElement = null;
+	this.labelElement = null;
+};
+
+Link.prototype.getArrowPosition = function() {
+	var ar = this.a.getRect();
+	ar.left -= -2;
+	ar.top -= -2;
+	ar.right += -2;
+	ar.bottom += -2;
+	var ai;
+	ai = intersect(this.a.x, this.a.y, this.b.x, this.b.y, ar.left, ar.top, ar.right, ar.top);
+	if(ai == null) {
+		ai = intersect(this.a.x, this.a.y, this.b.x, this.b.y, ar.left, ar.top, ar.left, ar.bottom);
+		if(ai == null) {
+			ai = intersect(this.a.x, this.a.y, this.b.x, this.b.y, ar.left, ar.bottom, ar.right, ar.bottom);
+			if(ai == null) {
+				ai = intersect(this.a.x, this.a.y, this.b.x, this.b.y, ar.right, ar.top, ar.right, ar.bottom);
+				if(ai == null) {
+					//ai = {x: this.a.x, y: this.a.y};
+					return {ax: this.a.x, ay: this.a.y, bx: this.b.x, by: this.b.y};
+				}
+			}
+		}
+	}
+	var br = this.b.getRect();
+	br.left -= 4;
+	br.top -= 4;
+	br.right += 4;
+	br.bottom += 4;
+	var bi;
+	bi = intersect(this.a.x, this.a.y, this.b.x, this.b.y, br.left, br.top, br.right, br.top);
+	if(bi == null) {
+		bi = intersect(this.a.x, this.a.y, this.b.x, this.b.y, br.left, br.top, br.left, br.bottom);
+		if(bi == null) {
+			bi = intersect(this.a.x, this.a.y, this.b.x, this.b.y, br.left, br.bottom, br.right, br.bottom);
+			if(bi == null) {
+				bi = intersect(this.a.x, this.a.y, this.b.x, this.b.y, br.right, br.top, br.right, br.bottom);
+				if(bi == null) {
+					return {ax: this.a.x, ay: this.a.y, bx: this.b.x, by: this.b.y};
+				}
+			}
+		}
+	}
+	return {ax: ai.x, ay: ai.y, bx: bi.x, by: bi.y};
+};
+
+function clipLineOutRect(sx, sy, ex, ey, rect) {
+	var ai;
+	ai = intersect(sx, sy, ex, ey, rect.left, rect.top, rect.right, rect.top);
+	if(ai == null) {
+		ai = intersect(sx, sy, ex, ey, rect.left, rect.top, rect.left, rect.bottom);
+		if(ai == null) {
+			ai = intersect(sx, sy, ex, ey, rect.left, rect.bottom, rect.right, rect.bottom);
+			if(ai == null) {
+				ai = intersect(sx, sy, ex, ey, rect.right, rect.top, rect.right, rect.bottom);
+				if(ai == null) {
+					//ai = {x: this.a.x, y: this.a.y};
+					return {x: ex, y: ey};
+				}
+			}
+		}
+	}
+	return ai;
+};
+
+///////////////////////////////////////////////////////////
+
+var currentMap = new ConceptMap("new concept map", null);
+
+dragObject = null;
+mode = 0;	// 0: free, 1: showNodeMenu, 2: nodeLabelEdit, 3: nodeLink
+linkGuideElement = null;
+linkGuideStartX = 0;
+linkGuideStartY = 0;
+
+
+canvas.ondblclick = function(e) {
+	adjustXY(e);
+
+	var node = currentMap.createNode("");
+	node.x = mouseX;
+	node.y = mouseY;
+
+	newNodeElement(node);
+};
+
+function newNodeElement(node) {
+	var elm = document.createElement("div");
+	elm.className = "node";
+	elm.id = "node" + node.id;
+	elm.innerHTML = node.label;
+
+	canvas.appendChild(elm);
+
+	node.element = elm;
+
+	elm.style.left = (node.x - elm.offsetWidth / 2) + "px";
+	elm.style.top = (node.y - elm.offsetHeight / 2) + "px";
+	
+	elm.onmousedown = function(e) {
+		switch(mode) {
+		case 0:
+		case 1:
+			adjustXY(e);
+
+			dragX = mouseX;
+			dragY = mouseY;
+			draging = false;
+
+			dragObject = node;
+			return false;
+			break;
+		}
+	};
+	elm.onmouseup = function(e) {
+		switch(mode) {
+		case 0:
+			if(!draging) {
+				nodeMenu.style.display = "inline-block";
+				nodeMenu.style.left = elm.style.left;
+				nodeMenu.style.top = (node.y - 16 - nodeMenu.clientHeight) + "px";
+				currentNode = node;
+				mode = 1;
+			}
+			break;
+		case 1:
+			if(!draging) {
+				elm.contentEditable = true;
+				elm.focus();
+				mode = 2;
+			}
+			break;
+		case 3:
+			if(currentNode != node) {
+				var link = currentMap.createLink("", currentNode, node);
+				newLinkElement(link);
+				nodeMenu.style.display = "none";
+				mode = 0;
+			}
+			break;
+		}
+	};
+	elm.onkeydown = function(e) {
+		if(e.keyCode == 13) {
+			return false;
+		}
+	};
+	elm.onkeyup = function(e) {
+		node.label = elm.textContent;
+	};
+};
+
+function newLinkElement(link) {
+	var elm = document.createElement("div");
+	elm.className = "arrow";
+	//elm.id = "arrow" + (arrowId++);
+
+	link.arrowElement = elm;
+
+	canvas.appendChild(elm);
+
+
+	var elm = document.createElement("div");
+	elm.className = "linkLabel";
+	elm.innerHTML = link.label;
+
+	link.labelElement = elm;
+
+	canvas.appendChild(elm);
+
+	elm.contentEditable  = true;
+
+	elm.onmousedown = function(e) {
+		switch(mode) {
+		case 0:
+			adjustXY(e);
+
+			dragX = mouseX;
+			dragY = mouseY;
+			draging = false;
+
+			dragObject = link;
+			return false;
+			break;
+		}
+	};
+
+	elm.onmouseup = function(e) {
+		if(!draging) {
+			nodeMenu.style.display = "none";
+			linkMenu.style.display = "inline-block";
+			linkMenu.style.left = elm.style.left;
+			linkMenu.style.top = ((link.a.y + link.b.y) / 2 - 16 - linkMenu.clientHeight) + "px";
+			currentLink = link;
+			mode = 14;
+		}
+	};
+
+	elm.onkeydown = function(e) {
+		if(e.keyCode == 13) {
+			this.blur();// TODO
+			return false;
+		}
+	};
+
+	elm.onkeyup = function(e) {
+		link.label = elm.textContent;
+	};
+
+	link.reposition();
+};
+
+canvas.onmousedown = function(e) {
+	switch(mode) {
+	case 0:
+		if(e.target == canvas) {
+			adjustXY(e);
+			currentNode = currentMap.getNodeByPosition(mouseX, mouseY, 16);
+			if(currentNode != null) {
+				linkGuideElement = document.createElement("div");
+				linkGuideElement.className = "line";
+				linkGuideElement.style.zIndex = 30;
+				linkGuideElement.style.background = "#ff9902";
+				canvas.appendChild(linkGuideElement);
+				linkGuideStartX = mouseX;
+				linkGuideStartY = mouseY;
+				repositionLine(linkGuideElement, linkGuideStartX, linkGuideStartY, linkGuideStartX, linkGuideStartY);
+				mode = 20;
+			}
+			return false;
+		}
+		break;
+	case 1:
+		if(e.target == canvas) {
+			nodeMenu.style.display = "none";
+			mode = 0;
+			currentNode.element.blur();
+		}
+		return false;
+		break;
+	case 2:
+		if(e.target == canvas) {
+			nodeMenu.style.display = "none";
+			mode = 0;
+		}
+		break;
+	case 3:
+		if(e.target == canvas) {
+			nodeMenu.style.display = "none";
+			mode = 0;
+		}
+		return false;
+		break;
+	case 14:
+		if(e.target == canvas) {
+			//nodeMenu.style.display = "none";
+			linkMenu.style.display = "none";
+			currentLink.labelElement.blur();
+			mode = 0;
+			return false;
+		}
+		break;
+	}
+};
+
+window.onmousemove = function(e) {
+	if(mode == 20) {
+		adjustXY(e);
+		repositionLine(linkGuideElement, linkGuideStartX, linkGuideStartY, mouseX, mouseY);
+	}
+	if(dragObject == null) {
+		return;
+	}
+	adjustXY(e);
+
+	draging = true;
+
+	if(dragObject instanceof Node) {
+		var elm = dragObject.element;
+
+		dragObject.x = (dragObject.x + mouseX - dragX);
+		dragObject.y = (dragObject.y + mouseY - dragY);
+		elm.style.left = (dragObject.x - elm.offsetWidth / 2)  + "px";
+		elm.style.top = (dragObject.y - elm.offsetHeight / 2)  + "px";
+
+		for(var i = 0, len = dragObject.links.length; i < len; ++i) {
+			dragObject.links[i].reposition();
+		}
+
+		dragX = mouseX;
+		dragY = mouseY;
+	} else if(dragObject instanceof Link) {
+		var elm = dragObject.labelElement;
+
+		if(dragObject.labelLocation == undefined) {
+			dragObject.labelLocation = {x: mouseX, y: mouseY};
+		} else {
+			dragObject.labelLocation.x = (dragObject.labelLocation.x + mouseX - dragX);
+			dragObject.labelLocation.y = (dragObject.labelLocation.y + mouseY - dragY);
+			dragObject.reposition();
+		}
+		dragX = mouseX;
+		dragY = mouseY;
+	}
+};
+
+window.onmouseup = function(e) {
+	dragObject = null;
+	if(mode == 20) {
+		canvas.removeChild(linkGuideElement);
+		linkGuideElement = null;
+
+		adjustXY(e);
+		var node = currentMap.getNodeByPosition(mouseX, mouseY, 16);
+		if(node != null) {
+			if(currentNode != node) {
+				var l = currentMap.createLink("", currentNode, node);
+				newLinkElement(l);
+			} else if(distance(((linkGuideStartX + mouseX) / 2 - node.x) / node.element.offsetWidth, ((linkGuideStartY + mouseY) / 2 - node.y) / node.element.offsetHeight) < 0.3) {
+				currentNode = node;
+				removeNodeButton();
+			}
+		}
+		mode = 0;
+	}
+};
+
+function linkButton() {
+	//nodeMenu.style.display = "none";
+	//mode = 0;
+	mode = 3;
+};
+
+function removeNodeButton() {
+	currentMap.removeNode(currentNode);
+	nodeMenu.style.display = "none";
+	mode = 0;
+};
+
+function removeLinkButton() {
+	currentMap.removeLink(currentLink);
+	
+	linkMenu.style.display = "none";
+	mode = 0;
+};
+
+function nojointButton() {
+	currentLink.labelLocation = null;
+	currentLink.reposition();
+	currentLink = null;
+	linkMenu.style.display = "none";
+	mode = 0;
+};
+
+function nodalizeButton() {
+	var node = currentMap.createNode(currentLink.label);
+	if(currentLink.labelLocation == null) {
+		node.x = (currentLink.a.x + currentLink.b.x) / 2;
+		node.y = (currentLink.a.y + currentLink.b.y) / 2;
+	} else {
+		node.x = currentLink.labelLocation.x;
+		node.y = currentLink.labelLocation.y;
+	}
+	var l1 = currentMap.createLink("", node, currentLink.a);
+	var l2 = currentMap.createLink("", node, currentLink.b);
+	newNodeElement(node);
+	newLinkElement(l1);
+	newLinkElement(l2);
+	currentLink.labelLocation = null;
+	currentLink.reposition();
+
+	removeLinkButton();
+};
+
+function reverseDirectionButton() {
+	var tmp = currentLink.a;
+	currentLink.a = currentLink.b;
+	currentLink.b = tmp;
+	currentLink.reposition();
+
+	linkMenu.style.display = "none";
+	mode = 0;
+};
+
+
+window.onload = function() {
+	var src = getUrlParameter("cm");
+	if(src != null) {
+		var json;
+		if(src.charAt(0) == "{") {
+			json = JSON.parse(src);
+
+			var cm = new ConceptMap(json.label);
+			cm.label = json.label;
+			for(var i = 0, len = json.nodes.length; i < len; ++i) {
+				var n = cm.createNode(json.nodes[i].label);
+				n.id = json.nodes[i].id;
+				n.x = json.nodes[i].x;
+				n.y = json.nodes[i].y;
+			}
+			for(var i = 0, len = json.links.length; i < len; ++i) {
+				var l = cm.createLink(json.links[i].label, cm.getNodeById(json.links[i].a), cm.getNodeById(json.links[i].b));
+				l.id = json.links[i].id;
+				l.labelLocation = json.links[i].labelLocation == undefined ? null : json.links[i].labelLocation;
+			}
+			cm.newNolId = json.newNolId;
+
+			currentMap = cm;
+		} else {
+			json = deserialize(src, model);
+
+			var cm = new ConceptMap(json.label);
+			cm.label = json.label;
+			for(var i = 0, len = json.nodes.length; i < len; ++i) {
+				var n = cm.createNode(json.nodes[i].label);
+				n.id = json.nodes[i].id;
+				n.x = json.nodes[i].x;
+				n.y = json.nodes[i].y;
+			}
+			for(var i = 0, len = json.links.length; i < len; ++i) {
+				var l = cm.createLink(json.links[i].label, cm.getNodeById(json.links[i].a.id), cm.getNodeById(json.links[i].b.id));
+				l.id = json.links[i].id;
+				l.labelLocation = json.links[i].labelLocation;
+			}
+			cm.newNolId = json.newNolId;
+
+			currentMap = cm;
+		}
+
+
+		for(var i = 0, len = currentMap.nodes.length; i < len; ++i) {
+			newNodeElement(currentMap.nodes[i]);
+		}
+		for(var i = 0, len = currentMap.links.length; i < len; ++i) {
+			newLinkElement(currentMap.links[i]);
+		}
+	}
+};
+
+Node.prototype.reposition = function() {
+	this.element.style.left = (this.x - this.element.offsetWidth / 2) + "px";
+	this.element.style.top = (this.y - this.element.offsetHeight / 2) + "px";
+};
+
+Link.prototype.reposition = function() {
+/*	var ap = this.getArrowPosition();
+
+	var angle = Math.atan2(ap.by - ap.ay, ap.bx - ap.ax);
+	var length = Math.sqrt((ap.ax - ap.bx) * (ap.ax - ap.bx) + (ap.ay - ap.by) * (ap.ay - ap.by));
+
+	this.arrowElement.style.left = ap.ax + "px";
+	this.arrowElement.style.top = ap.ay + "px";
+	this.arrowElement.style.width = (length - 8) + "px";
+
+	this.arrowElement.style.MozTransform = "rotate(" + angle + "rad)";
+	this.arrowElement.style.WebkitTransform = "rotate(" + angle + "rad)";
+
+
+	this.labelElement.style.left = ((ap.ax + ap.bx - this.labelElement.offsetWidth) / 2) + "px";
+	this.labelElement.style.top = ((ap.ay + ap.by - this.labelElement.offsetHeight) / 2) + "px";
+	*/
+	if(this.labelLocation == null) {
+		if(this.lineElement != null) {
+			canvas.removeChild(this.lineElement);
+			this.lineElement = null;
+		}
+
+		var ar = this.a.getRect();
+		ar.left += 2;
+		ar.top += 2;
+		ar.right -= 2;
+		ar.bottom -= 2;
+		var ap = clipLineOutRect(this.b.x, this.b.y, this.a.x, this.a.y, ar);
+		var br = this.b.getRect();
+		br.left -= 4;
+		br.top -= 4;
+		br.right += 4;
+		br.bottom += 4;
+		var bp = clipLineOutRect(this.a.x, this.a.y, this.b.x, this.b.y, br);
+		repositionArrow(this.arrowElement, ap.x, ap.y, bp.x, bp.y);
+
+		this.labelElement.style.left = ((ap.x + bp.x - this.labelElement.offsetWidth) / 2) + "px";
+		this.labelElement.style.top = ((ap.y + bp.y - this.labelElement.offsetHeight) / 2) + "px";
+	} else {
+		if(this.lineElement == null) {
+			var elm = document.createElement("div");
+			elm.className = "line";
+
+			this.lineElement = elm;
+
+			canvas.appendChild(elm);
+		}
+		
+		var ar = this.a.getRect();
+		ar.left += 2;
+		ar.top += 2;
+		ar.right -= 2;
+		ar.bottom -= 2;
+		var ap = clipLineOutRect(this.labelLocation.x, this.labelLocation.y, this.a.x, this.a.y, ar);
+		repositionLine(this.lineElement, ap.x, ap.y, this.labelLocation.x, this.labelLocation.y);
+		var br = this.b.getRect();
+		br.left -= 4;
+		br.top -= 4;
+		br.right += 4;
+		br.bottom += 4;
+		var bp = clipLineOutRect(this.labelLocation.x, this.labelLocation.y, this.b.x, this.b.y, br);
+		repositionArrow(this.arrowElement, this.labelLocation.x, this.labelLocation.y, bp.x, bp.y);
+
+		this.labelElement.style.left = (this.labelLocation.x - this.labelElement.offsetWidth / 2) + "px";
+		this.labelElement.style.top = (this.labelLocation.y - this.labelElement.offsetHeight / 2) + "px";
+	}
+};
+
+function repositionLine(elm, sx, sy, ex, ey) {
+	var angle = Math.atan2(ey - sy, ex - sx);
+	var length = Math.sqrt((sx - ex) * (sx - ex) + (sy - ey) * (sy - ey));
+
+	elm.style.left = sx + "px";
+	elm.style.top = sy + "px";
+	elm.style.width = length + "px";
+
+	elm.style.MozTransform = "rotate(" + angle + "rad)";
+	elm.style.WebkitTransform = "rotate(" + angle + "rad)";
+};
+
+function repositionArrow(elm, sx, sy, ex, ey) {
+	var angle = Math.atan2(ey - sy, ex - sx);
+	var length = Math.sqrt((sx - ex) * (sx - ex) + (sy - ey) * (sy - ey));
+
+	elm.style.left = sx + "px";
+	elm.style.top = sy + "px";
+	elm.style.width = (length - 8) + "px";
+
+	elm.style.MozTransform = "rotate(" + angle + "rad)";
+	elm.style.WebkitTransform = "rotate(" + angle + "rad)";
+};
+
+window.onkeydown = function(e) {
+	if(e.target != document.body) {
+		return true;
+	}
+	switch(e.keyCode) {
+	case 83:
+		if(e.ctrlKey) {
+			if(e.shiftKey) {
+				document.getElementById("status").innerHTML =
+				"<a href=\"" + window.location.href.split("?")[0] +
+				"?cm=" + encodeURIComponent(currentMap.toJson()) + "\">Link to open this Concept map</a>";
+			} else {
+				document.getElementById("status").innerHTML =
+					"<a href=\"" + window.location.href.split("?")[0] +
+					"?cm=" + encodeURIComponent(serialize(currentMap, model)) + "\">Link to open this Concept map</a>";
+			}
+			return false;
+		}
+		break;
+	case 72:
+		if(e.ctrlKey) {
+			document.getElementById("status").innerHTML =
+				"<pre><code>" + canvas.innerHTML.replace(/</g, "&lt;").replace(/>/g, "&gt;") +
+				"</code></pre>";
+			return false;
+		}
+		break;
+	case 32:
+		smartBuildInput.value = "";
+		smartBuildInput.style.display = "inline-block";
+		smartBuildInput.focus();
+		return false;　
+		break;
+	case 8:
+		if(mode == 1) {
+			removeNodeButton();
+		}
+		break;
+	case 49:
+		if(mode == 1) {
+			currentNode.element.style.backgroundColor = "#fafafa";
+		}
+		break;
+	}
+};
+
+smartBuildInput.onkeyup = function(e) {
+	if(e.keyCode == 13) {
+		// hoge test yo
+		var ss = smartBuildInput.value.split(" ");
+		if(ss.length == 3) {
+			var i = 0;
+			var na = currentMap.getNodeByLabel(ss[0]);
+			if(na == null) {
+				na = currentMap.createNode(ss[0]);
+				newNodeElement(na);
+				i += 1;
+			}
+			var nb = currentMap.getNodeByLabel(ss[2]);
+			if(nb == null) {
+				nb = currentMap.createNode(ss[2]);
+				newNodeElement(nb);
+				i += 2;
+			}
+			switch(i) {
+			case 1:
+				do {
+					var angle = Math.random() * Math.PI * 2;
+					na.x = ~~(nb.x + Math.cos(angle) * 120);
+					na.y = ~~(nb.y + Math.sin(angle) * 120);
+				} while(na.x < 0 || canvas.clientWidth <= na.x || na.y < 0 || canvas.clientHeight <= na.y);
+				na.reposition();
+				break;
+			case 2:
+				do {
+					var angle = Math.random() * Math.PI * 2;
+					nb.x = ~~(na.x + Math.cos(angle) * 120);
+					nb.y = ~~(na.y + Math.sin(angle) * 120);
+				} while(nb.x < 0 || canvas.clientWidth <= nb.x || nb.y < 0 || canvas.clientHeight <= nb.y);
+				nb.reposition();
+				break;
+			case 3:
+				na.x = ~~(Math.random() * canvas.clientWidth);
+				na.y = ~~(Math.random() * canvas.clientHeight);
+				na.reposition();
+				do {
+					var angle = Math.random() * Math.PI * 2;
+					nb.x = ~~(na.x + Math.cos(angle) * 120);
+					nb.y = ~~(na.y + Math.sin(angle) * 120);
+				} while(nb.x < 0 || canvas.clientWidth <= nb.x || nb.y < 0 || canvas.clientHeight <= nb.y);
+				nb.reposition();
+				break;
+			}
+			var l = currentMap.createLink(ss[1], na, nb);
+			newLinkElement(l);
+		} else if(ss.length == 1) {
+			var n = currentMap.createNode(ss[0]);
+			n.x = ~~(Math.random() * canvas.clientWidth);
+			n.y = ~~(Math.random() * canvas.clientHeight);
+			newNodeElement(n);
+		}
+		smartBuildInput.value = "";
+	} else if(e.keyCode == 27) {
+		smartBuildInput.blur();
+		smartBuildInput.style.display = "none";
+	}
+};
+
+function serialize(data, model) {
+	if(data instanceof Array) {
+		var ret = String(data.length);
+		for(var i = 0, len = data.length; i < len; ++i) {
+			ret += serialize_separator + serialize(data[i], model);
+		}
+		return ret;
+	} else if(data instanceof Object) {
+		var ret = new Array();
+		for(var i = 0, len = model.length; i < len; ++i) {
+			if(model[i] instanceof Object) {
+				if(model[i].optional) {
+					if(data[model[i].key] == null) {
+						ret.push("0");
+					} else {
+						ret.push("1");
+						ret.push(serialize(data[model[i].key], model[i].model));
+					}
+				} else {
+					ret.push(serialize(data[model[i].key], model[i].model));
+				}
+			} else {
+				ret.push(serialize(data[model[i]]));	
+			}
+		}
+		return ret.join(serialize_separator);
+	} else {
+		return JSON.stringify(data);
+	}
+};
+
+function deserialize(str, model) {
+	var p = 0;
+	var len = str.length;
+	var ss = new Array();
+
+	while(p < len) {
+		if(str.charAt(p) == "\"") {
+			var sp = str.indexOf("\"" + serialize_separator, p + 1) + 1;	// TODO
+			if(sp == -1) {
+				sp = len;
+			}
+			ss.push(JSON.parse(str.substring(p, sp)));
+			p = sp + 1;
+		}	else {
+			var sp = str.indexOf(serialize_separator, p + 1);
+			if(sp == -1) {
+				sp = len;
+			}
+			ss.push(JSON.parse(str.substring(p, sp)));
+			p = sp + 1;
+		}
+	}
+
+	return deserialize_(ss, model);
+};
+
+function deserialize_(ss, model) {
+	if(model instanceof Array) {
+		var ret = new Object();
+		for(var i = 0, len = model.length; i < len; ++i) {
+			if(model[i] instanceof Object) {
+				ret[model[i].key] = deserialize_(ss, model[i]);
+			} else {
+				ret[model[i]] = deserialize_(ss);
+			}
+		}
+		return ret;
+	} else if(model instanceof Object) {
+		if(model.optional) {
+			if(ss[0] == 0) {
+				ss.splice(0, 1);
+				return null;
+			} else {
+				ss.splice(0, 1);
+			}
+		}
+		if(model.type == "array") {
+			var len = parseInt(ss[0]);
+			ss.splice(0, 1);
+			var ret = new Array();
+			for(var i = 0; i < len; ++i) {
+				ret.push(deserialize_(ss, model.model));
+			}
+			return ret;
+		} else if(model.type == "object") {
+			return deserialize_(ss, model.model);
+		}
+	} else {
+		var ret = ss[0];
+		ss.splice(0, 1);
+		return ret;
+	}
+};
+
+var model = [
+	"label",
+	{key: "nodes", type: "array", model:
+		[
+		"id", "label", "x", "y"
+		]},
+	{key: "links", type: "array", model:
+		[
+		"id", "label",
+		{key:"a", type: "object", model: ["id"]},
+		{key:"b", type: "object", model: ["id"]},
+		{key: "labelLocation", type: "object", model: ["x", "y"], optional: true}
+		]},
+	"newNolId"
+	];
+
+var serialize_separator = "_";
+
+	</script>
+</body>
+</html>
