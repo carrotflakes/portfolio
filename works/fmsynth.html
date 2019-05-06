@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<title>FM synth</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, minimum-scale=1, maximum-scale=1">
+<style type="text/css">
+
+	html, body {
+		width: auto;
+		height: auto;
+	}
+
+	body {
+		font-family: "Lucida Grande", "segoe UI", "ヒラギノ角ゴ ProN W3", "Hiragino Kaku Gothic Pro", "メイリオ", Meiryo, Verdana, Arial, sans-serif;
+	}
+
+	input[type="number"] {
+		width: 60px;
+	}
+
+	.oscModelControl {
+		padding: 4px;
+	}
+
+	.osc {
+		background: #EEE;
+		border-left: solid 3px #333;
+		padding-left: 4px;
+		margin: 4px 2px;
+	}
+
+	.keyboard {
+		position: relative;
+		margin: 10px;
+		width: 360px;
+		height: 80px;
+		user-select: none;
+		-moz-user-select: none;
+		-webkit-user-select: none;
+		-o-user-select: none;
+	}
+	.keyboard>div {
+		display: block;
+		position: absolute;
+		width: 38px;
+		height: 38px;
+		text-align: center;
+		cursor: pointer;
+		border-radius: 2px;
+		font-size: large;
+	}
+	.keyboard>div:hover {
+		box-shadow: 0px 0px 4px #D50;
+	}
+	.keyboard>div:nth-of-type(1) {
+		background: #DDD;
+		color: #333;
+		left: 0px;
+		top: 40px;
+	}
+	.keyboard>div:nth-of-type(2) {
+		background: #333;
+		color: #DDD;
+		left: 20px;
+		top: 0px;
+	}
+	.keyboard>div:nth-of-type(3) {
+		background: #DDD;
+		color: #333;
+		left: 40px;
+		top: 40px;
+	}
+	.keyboard>div:nth-of-type(4) {
+		background: #333;
+		color: #DDD;
+		left: 60px;
+		top: 0px;
+	}
+	.keyboard>div:nth-of-type(5) {
+		background: #DDD;
+		color: #333;
+		left: 80px;
+		top: 40px;
+	}
+	.keyboard>div:nth-of-type(6) {
+		background: #DDD;
+		color: #333;
+		left: 120px;
+		top: 40px;
+	}
+	.keyboard>div:nth-of-type(7) {
+		background: #333;
+		color: #DDD;
+		left: 140px;
+		top: 0px;
+	}
+	.keyboard>div:nth-of-type(8) {
+		background: #DDD;
+		color: #333;
+		left: 160px;
+		top: 40px;
+	}
+	.keyboard>div:nth-of-type(9) {
+		background: #333;
+		color: #DDD;
+		left: 180px;
+		top: 0px;
+	}
+	.keyboard>div:nth-of-type(10) {
+		background: #DDD;
+		color: #333;
+		left: 200px;
+		top: 40px;
+	}
+	.keyboard>div:nth-of-type(11) {
+		background: #333;
+		color: #DDD;
+		left: 220px;
+		top: 0px;
+	}
+	.keyboard>div:nth-of-type(12) {
+		background: #DDD;
+		color: #333;
+		left: 240px;
+		top: 40px;
+	}
+	.keyboard>div:nth-of-type(13) {
+		background: #DDD;
+		color: #333;
+		left: 280px;
+		top: 40px;
+	}
+	.keyboard>div:nth-of-type(14) {
+		background: #333;
+		color: #DDD;
+		left: 300px;
+		top: 0px;
+	}
+	.keyboard>div:nth-of-type(15) {
+		background: #DDD;
+		color: #333;
+		left: 320px;
+		top: 40px;
+	}
+
+	input[type="button"] {
+		font-size: large;
+		background: #EC9090;
+		padding: 5px 10px;
+		border: solid 2px #C85454;
+		border-radius: 4px;
+	}
+	input[type="button"]:hover {
+		background: #F4BEBE;
+	}
+
+</style>
+</head>
+<body>
+
+	<div class="keyboard" data-bind="foreach: ['z', 's', 'x', 'd', 'c', 'v', 'g', 'b', 'h', 'n', 'j', 'm', ',', 'l', '.']">
+		<div data-bind="text: $data, event{mousedown: noteOn.bind(null, $index()), touchstart: noteOn.bind(null, $index())}"></div>
+	</div>
+
+
+	<div class="oscModelControl">
+		<div data-bind="foreach: oscModel">
+			<div class="osc">
+				<b><div data-bind="text: 'Operator' + ($index() + 1)"></div></b>
+				<div title="Ratioモード : オペレータに入力された周波数にこの値を乗算します
+Fixedモード : オペレータに入力された周波数に関わらずこの値が周波数になります">
+					Frequency : <input type="number" data-bind="value: freq">
+				</div>
+				<div title="RatioモードとFixedモードを切り替えます チェックを付けることでRatioモードになります">
+					Ratio/Fixed : <input type="checkbox" data-bind="checked: ratio">
+				</div>
+				<div title="出力する波形の最大振幅です outへ出力するときは -1~1 が推奨されます">
+					Amplification : <input type="number" data-bind="value: amp">
+				</div>
+				<div title="振幅の時間的変化をADSRエンベロープで指定します">
+					ADSR Envelope :
+					<input type="number" data-bind="value: env[0]">
+					<input type="number" data-bind="value: env[1]">
+					<input type="number" data-bind="value: env[2]">
+					<input type="number" data-bind="value: env[3]">
+				</div>
+				<div title="出力先を指定します 数字はオペレータの番号を示しています outへ出力することで発音されます">
+					Connections :
+					<span data-bind="foreach: con">
+						<span data-bind="text: $index() === 0 ? 'out' : $index()"></span>
+						<input type="checkbox" data-bind="checked: $parent.con[$index()]">
+					</span>
+				</div>
+			</div>
+		</div>
+
+		<div>
+			<input type="button" value="set" data-bind="click: set">
+		</div>
+	</div>
+
+
+	<!--div>
+		<textarea id="source" rows="10" cols="60">
+"freqs": [1, 2.05],
+"ratios": [true, true],
+"amps": [1, 1000],
+"envs": [[0.001, 2, 0.75, 0.2], [0.5, 2, 0.25, 0.2]],
+"cons": [[-1], [0]],
+"operatorNum": 2
+		</textarea>
+	</div>
+
+	<div>
+		<input type="button" value="set" onclick="setModel();">
+	</div-->
+	<hr>
+	<div>
+			&copy; 2013-2014 <a href="https://twitter.com/carrotflakes" target="_blank">Carrotflakes</a>
+	</div>
+	
+<script src="knockout-3.0.0.js"></script>
+<script>
+
+// AudioContext取得
+if (typeof(webkitAudioContext) !== "undefined") {
+	var audioctx = new webkitAudioContext();
+} else if (typeof(AudioContext) !== "undefined") {
+	var audioctx = new AudioContext();
+} else {
+	console.log("Failed to get AudioContext.");
+	alert("対応していない環境です。ごめんなさい。");
+}
+
+
+var FM = (function(audioctx) {
+
+	var FMOscModel = function() {
+		this.ratios = [true, true];
+		this.freqs = [1, 2];
+		this.dets = [0, 1];
+		this.amps = [1, 1000];
+		this.envs = [[0.001, 2, 0.75, 0.2], [0.5, 2, 0.25, 0.2]];	// adsr
+		this.cons = [[-1], [0]];
+		this.operatorNum = 2;
+	};
+
+	var FMOscState = function(oscModel, notenum, out) {
+		this.oscModel = oscModel;
+		this.vcos = [];
+		this.envs = [];
+		this._notenum = notenum;
+		this.frequency = freqTable[notenum - 9];
+
+		var vco, env;
+		for (var i = 0; i < oscModel.operatorNum; ++i) {
+			vco = audioctx.createOscillator();
+			vco.frequency.value = oscModel.ratios[i] ? oscModel.freqs[i] * this.frequency : oscModel.freqs[i];
+
+			this.vcos[i] = vco;
+
+			env = audioctx.createGain();
+
+			vco.connect(env);
+
+			this.envs[i] = env;
+		}
+
+		for (var i = 0; i < oscModel.operatorNum; ++i) {
+			for(var j = 0, jl = oscModel.cons[i].length; j < jl; ++j) {
+				if (oscModel.cons[i][j] === -1) {
+					this.envs[i].connect(out);
+				} else {
+					this.envs[i].connect(this.vcos[oscModel.cons[i][j]].frequency);
+				}
+			}
+		}
+	};
+
+	FMOscState.prototype.start = function(time) {
+		var env, adsr, amp;
+		for (var i = 0; i < this.oscModel.operatorNum; ++i) {
+			env = this.envs[i];
+			adsr = this.oscModel.envs[i];
+			amp = this.oscModel.amps[i];
+
+			this.vcos[i].start(time);
+
+			env.gain.setValueAtTime(0, time);
+			env.gain.linearRampToValueAtTime(amp, time + adsr[0]);
+			env.gain.linearRampToValueAtTime(amp * adsr[2], time + adsr[0] + adsr[1]);
+		}
+	};
+
+	FMOscState.prototype.stop = function(time) {
+		var env, adsr;
+		for (var i = 0; i < this.oscModel.operatorNum; ++i) {
+			env = this.envs[i];
+			adsr = this.oscModel.envs[i];
+
+			this.vcos[i].stop(time + adsr[3]);
+
+			env.gain.linearRampToValueAtTime(0, time + adsr[3]);
+		}
+	};
+
+
+	var FMSynth = function(oscModel) {
+		this._poly = 0;
+		this.oscModel = oscModel;
+		this.oscStates = {};
+		this.master = audioctx.createGain();
+		this.master.gain.value = 0.1;
+		this.master.connect(audioctx.destination);
+		this.playingNoteCount = 0;
+
+		this.poly(16);
+	};
+
+	FMSynth.prototype.noteOn = function(notenum, startTime) {
+		//var state = this.lookupNextState(notenum);
+
+		if (this.oscStates[notenum] !== undefined) {
+			this.oscStates[notenum].stop(startTime);
+			this.playingNoteCount -= 1;
+		}
+
+		var state = new FMOscState(this.oscModel, notenum, this.master);
+
+		state.start(startTime);
+
+		this.oscStates[notenum] = state;
+			this.playingNoteCount += 1;
+
+		return this;
+	};
+
+	FMSynth.prototype.noteOff = function(notenum, endTime) {
+		var state = this.oscStates[notenum];
+
+		if (state !== undefined) {
+			state.stop(endTime);
+			this.playingNoteCount -= 1;
+
+			delete this.oscStates[notenum];
+		}
+
+		return this;
+	};
+
+	FMSynth.prototype.allNoteOff = function(endTime) {
+		for (var i = 0; i < 128; ++i) {
+			if (this.oscStates[i] !== undefined) {
+				this.oscStates[i].stop(endTime);
+				delete this.oscStates[i];
+			}
+		}
+
+		this.playingNoteCount = 0;
+
+		return this;
+	};
+
+	FMSynth.prototype.poly = function(p) {
+		if (p === undefined) {
+			return this._poly;
+		}
+
+		if (p < 1) {
+			p = 1;
+		} else if (64 < p) {
+			p = 64;
+		}
+		/*
+		if (this._poly < p) {	// 増加するよ
+			for (var i = this._poly; i < p; ++i) {
+				this.oscStates.push(this.oscModel.createState());	// TODO
+			}
+		} else if (p < this._poly) {	// 減少するよ
+			for (var i = this._poly; p < i; --i) {
+				this.oscStates[i].destroy();
+			}
+			this.oscStates.length = p;
+		}
+		*/
+		this._poly = p;
+
+		return this;
+	};
+
+
+	// 周波数テーブル生成
+	var freqTable = [];
+	for (var i = 1; i < 12 * 8; ++i) {
+		freqTable[i] = 13.75 * Math.pow(2, i / 12);
+	}
+
+	return {Synth: FMSynth, OscModel: FMOscModel};
+})(audioctx);
+
+
+var oscModel = new FM.OscModel();
+var fm = new FM.Synth(oscModel);
+//fm.noteOn(60, audioctx.currentTime);
+//fm.noteOn(63, audioctx.currentTime);
+//fm.noteOn(65, audioctx.currentTime);
+
+
+var AppModel = function(oscModel) {
+	var self = this;
+
+	self.oscModel = ko.observableArray([]);
+
+	self.oscModel.push({
+		freq: ko.observable(1),
+		ratio: ko.observable(true),
+		amp: ko.observable(1),
+		env: [ko.observable(0.001), ko.observable(2), ko.observable(0.75), ko.observable(0.2)],
+		con: [ko.observable(true), ko.observable(false), ko.observable(false), ko.observable(false), ko.observable(false)]
+	});
+	self.oscModel.push({
+		freq: ko.observable(2.05),
+		ratio: ko.observable(true),
+		amp: ko.observable(1000),
+		env: [ko.observable(0.5), ko.observable(2), ko.observable(0.25), ko.observable(0.2)],
+		con: [ko.observable(false), ko.observable(true), ko.observable(false), ko.observable(false), ko.observable(false)]
+	});
+	self.oscModel.push({
+		freq: ko.observable(5),
+		ratio: ko.observable(false),
+		amp: ko.observable(20),
+		env: [ko.observable(0.1), ko.observable(10), ko.observable(0.1), ko.observable(0.5)],
+		con: [ko.observable(false), ko.observable(true), ko.observable(false), ko.observable(false), ko.observable(false)]
+	});
+	self.oscModel.push({
+		freq: ko.observable(1),
+		ratio: ko.observable(true),
+		amp: ko.observable(1),
+		env: [ko.observable(0.001), ko.observable(2), ko.observable(0.75), ko.observable(0.2)],
+		con: [ko.observable(false), ko.observable(false), ko.observable(false), ko.observable(false), ko.observable(false)]
+	});
+
+	self.set = function() {
+		fm.oscModel.freqs = self.oscModel().map(function(e) {return +e.freq()});
+		fm.oscModel.ratios = self.oscModel().map(function(e) {return e.ratio()});
+		fm.oscModel.amps = self.oscModel().map(function(e) {return +e.amp()});
+		fm.oscModel.envs = self.oscModel().map(function(e) {return [+e.env[0](), +e.env[1](), +e.env[2](), +e.env[3]()]});
+		fm.oscModel.cons = self.oscModel().map(function(e) {
+			var ret = [];
+			e.con.forEach(function(e, idx) {
+				if(e()) {
+					ret.push(idx - 1);
+				}
+			});
+			return ret;
+		});
+		fm.oscModel.operatorNum = 4;
+	}
+
+	self.set();
+};
+
+ko.applyBindings(new AppModel(oscModel));
+
+
+(function() {
+	var downKey = -1;
+	var keyToNotenum = {
+		90: 60, 83: 61, 88: 62, 68: 63, 67: 64, 86: 65, 71: 66, 66: 67, 72: 68, 78: 69, 74: 70, 77: 71, 188: 72, 76: 73, 190: 74,
+	}
+	var keyRepeatCancel = {};
+
+	window.addEventListener("keydown", function(e) {
+		if (keyToNotenum[e.keyCode] !== undefined) {
+			if (keyRepeatCancel[e.keyCode] !== true) {
+				fm.noteOn(keyToNotenum[e.keyCode], audioctx.currentTime);
+				keyRepeatCancel[e.keyCode] = true;
+			}
+		}
+	});
+
+	window.addEventListener("keyup", function(e) {
+		if (keyToNotenum[e.keyCode] !== undefined) {
+			fm.noteOff(keyToNotenum[e.keyCode], audioctx.currentTime);
+			keyRepeatCancel[e.keyCode] = false;
+		}
+	});
+})();
+
+
+function setModel() {
+	var src = "{" + document.getElementById("source").value + "}";
+	var j = JSON.parse(src);
+
+	fm.oscModel.freqs = j.freqs;
+	fm.oscModel.ratios = j.ratios;
+	fm.oscModel.amps = j.amps;
+	fm.oscModel.envs = j.envs;
+	fm.oscModel.cons = j.cons;
+	fm.oscModel.operatorNum = j.operatorNum;
+};
+
+
+var pressingKeyByVisualKeyboard = null;
+function noteOn(idx) {
+	pressingKeyByVisualKeyboard = idx + 60;
+	fm.noteOn(pressingKeyByVisualKeyboard, audioctx.currentTime);
+
+	return false;
+}
+window.addEventListener("mouseup", function(e) {
+	if (pressingKeyByVisualKeyboard !== null) {
+		fm.noteOff(pressingKeyByVisualKeyboard, audioctx.currentTime);
+		pressingKeyByVisualKeyboard = null;
+	}
+});
+window.addEventListener("touchend", function(e) {
+	if (pressingKeyByVisualKeyboard !== null) {
+		fm.noteOff(pressingKeyByVisualKeyboard, audioctx.currentTime);
+		pressingKeyByVisualKeyboard = null;
+	}
+});
+
+// WebMidiLink のレシーバ
+var webMidiLinkRecv = function(event) {
+	var msg = event.data.split(",");
+	switch (msg[0]) {
+		case "midi":
+			switch (parseInt(msg[1], 16) & 0xf0) {
+				case 0x80:
+					fm.noteOff(parseInt(msg[2], 16) + 0, audioctx.currentTime);
+					break;
+				case 0x90:
+					var velo = parseInt(msg[3], 16);
+					if (velo > 0)
+						fm.noteOn(parseInt(msg[2], 16) + 0, audioctx.currentTime, velo);	// XXX velo
+					else
+						fm.noteOff(parseInt(msg[2], 16) + 0, audioctx.currentTime);
+					break;
+				case 0xb0:
+					if (parseInt(msg[2], 16) == 0x78) {
+						fm.allNoteOff(audioctx.currentTime);
+					}
+					break;
+			}
+			break;
+	}
+};
+window.addEventListener("message", webMidiLinkRecv, false);
+
+/*
+ADSSR
+デチューン
+キーボードレイトスケーリング
+プリセット
+*/
+
+</script>
+</body>
+</html>
