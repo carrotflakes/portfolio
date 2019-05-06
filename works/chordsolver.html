@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<title>Chord Solver</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, minimum-scale=1, maximum-scale=1">
+<style type="text/css">
+
+	html, body {
+		width: auto;
+		height: auto;
+	}
+
+	body {
+		font-family: "Lucida Grande", "segoe UI", "ヒラギノ角ゴ ProN W3", "Hiragino Kaku Gothic Pro", "メイリオ", Meiryo, Verdana, Arial, sans-serif;
+
+	}
+
+
+	.miniKeyboard {
+		word-spacing: 0;
+		user-select: none;
+		-moz-user-select: none;
+		-webkit-user-select: none;
+		-o-user-select: none;
+	}
+
+	.miniKeyboard>div {
+		background: #FCA17E;
+		font-size: 80%;
+		text-align: center;
+		width: 24px;
+		height: 24px;
+		display: inline-block;
+		margin: 1px;
+		cursor: pointer;
+	}
+
+	.chordCaption {
+		width: 100px;
+		display: inline-block;
+	}
+
+	.key0 {
+		display: inline-block;
+		width: 10px;
+		height: 10px;
+		margin: 1px;
+		background: #EEE;
+	}
+	.key1 {
+		display: inline-block;
+		width: 10px;
+		height: 10px;
+		margin: 1px;
+		background: #A33;
+	}
+
+	.footer {
+		margin-top: 30px;
+	}
+
+</style>
+</head>
+<body>
+
+
+	<div class="miniKeyboard" data-bind="foreach: keyStates"><div data-bind="text: name, style: {background: state() === 1 ? '#FA6931' : '#FCA17E'}, click: $root.press"></div></div>
+
+	<div data-bind="foreach: chords">
+		<div><span class="chordCaption" data-bind="text: chordName"></span><span data-bind="foreach: keyboard"><span data-bind="css: {key0: $data !== '|', key1: $data === '|'}"></span></span>
+		</div>
+	</div>
+
+	<div class="footer">© 2013 <a href="https://twitter.com/carrotflakes" target="_blank">Carrotflakes</a>
+</div>
+
+<script src="knockout-3.0.0.js"></script>
+<script>
+
+eval(function(p,a,c,k,e,r){e=function(c){return(c<a?'':e(parseInt(c/a)))+((c=c%a)>35?String.fromCharCode(c+29):c.toString(36))};if(!''.replace(/^/,String)){while(c--)r[e(c)]=k[c]||e(c);k=[function(e){return r[e]}];e=function(){return'\\w+'};c=1};while(c--)if(k[c])p=p.replace(new RegExp('\\b'+e(c)+'\\b','g'),k[c]);return p}('t=[[0,4,7],[0,4,7,11],[0,3,7],[0,3,7,10],[0,4,7,10],[0,5,7],[0,5,7,10],[0,3,6],[0,3,6,10],[0,3,6,9],[0,4,7,14],[0,3,7,14],[0,3,7,11],[0,4,7,9],[0,3,7,9],[0,4,8],[0,4,8,10],[0,4,6],[0,4,6,10],].q(n(e){o e.q(n(e){o e%12})});r=["","K","m","L","7","M","N","O","φ","P","Q","R","S","6","T","U","V","W","X",];u=r.v;h w=n(a){h b=[".",".",".",".",".",".",".",".",".",".",".","."];a.Y(n(e){b[e%12]="|"});o b.Z("")};h x=n(){h c=s;c.y=[{f:"C",2:d.g(0)},{f:"C♯",2:d.g(0)},{f:"D",2:d.g(0)},{f:"D♯",2:d.g(0)},{f:"E",2:d.g(0)},{f:"F",2:d.g(0)},{f:"F♯",2:d.g(0)},{f:"G",2:d.g(0)},{f:"G♯",2:d.g(0)},{f:"A",2:d.g(0)},{f:"A♯",2:d.g(0)},{f:"B",2:d.g(0)}];c.13=d.15(n(){h l=[];p(h i=0;i<12;++i){z(c.y[i].2()===1){l.H(i)}}h a=[];p(h i=0;i<12;++i){p(h j=0;j<u;++j){h b=t[j];I:{p(h k=0,J=l.v;k<J;++k){z(b.16((l[k]+17-i)%12)===-1){18 I}}a.H({19:["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"][i]+r[j],1a:w(b.q(n(e){o e+i}))})}}}o a});c.1b=n(e){s.2(1-s.2())}};d.1c(1d x());',62,76,'||state|||||||||||ko||name|observable|var||||||function|return|for|map|chordTypeNames|this|chordNotes|chordTypeSize|length|strKeyboard|AppModel|keyStates|if||||||||push|Skip|kl|M7|m7|sus4|7sus4|dim|dim7|add9|madd9|mM7|m6|aug|aug7|alt|alt7|forEach|join||||chords||computed|indexOf|24|break|chordName|keyboard|press|applyBindings|new'.split('|'),0,{}))
+
+</script>
+</body>
+</html>
