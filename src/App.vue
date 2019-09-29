@@ -5,7 +5,7 @@
          :style="{'top': circle.y + 'px', 'left': circle.x + 'px'}">
     </div>
     <div id="logo-container">
-      <img id="logo" alt="carrotflakes logo" src="./assets/logo.png">
+      <Logo style="logo"/>
     </div>
     <div style="font-size: 2em;">
       carrotflakes
@@ -28,6 +28,7 @@
 
 <script>
 import {play} from './bgm'
+import Logo from './components/Logo'
 
 export default {
   name: 'app',
@@ -47,6 +48,7 @@ export default {
     }
   },
   components: {
+    Logo
   }
 }
 </script>
