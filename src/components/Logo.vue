@@ -18,7 +18,7 @@ export default {
     const canvasEl = this.$refs.canvas
     const img = await getImage()
           .catch(() => this.fallbacked = true)
-    const pos = [...Array(16)].map((_, y) => [...Array(16)].map((_, x) => ({x: 0.0, y: 0.0, dx: (Math.random() - 0.5) * 2, dy: (Math.random() - 0.5) * 2})))
+    const pos = [...Array(16)].map(() => [...Array(16)].map(() => ({x: 0.0, y: 0.0, dx: (Math.random() - 0.5) * 2, dy: (Math.random() - 0.5) * 2})))
     const ctx = canvasEl.getContext('2d')
     const self = this
     function update() {
