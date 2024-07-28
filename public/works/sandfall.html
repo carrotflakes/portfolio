@@ -1,0 +1,147 @@
+<html>
+<head>
+<title>Sand fall</title>
+</head>
+<body style="display: flex; justify-content: center; background: #111;">
+  <canvas id="canvas" width="400" height="600"></canvas>
+  <script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+const fieldWidth = 40;
+const fieldHeight = 60;
+const field = new Array(fieldWidth * fieldHeight).fill(0);
+
+function fieldReset() {
+  field.fill(0);
+  for (let y = 0; y < fieldHeight; y++) {
+    field[y * fieldWidth + 0] = 1;
+    field[y * fieldWidth + fieldWidth - 1] = 1;
+  }
+  for (let x = 0; x < fieldWidth; x++) {
+    field[(fieldHeight - 1) * fieldWidth + x] = 1;
+  }
+}
+
+fieldReset();
+
+function draw() {
+  ctx.fillStyle = '#222';
+  ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+  for (let y = 0; y < fieldHeight; y++) {
+    for (let x = 0; x < fieldWidth; x++) {
+      const i = y * fieldWidth + x;
+      ctx.fillStyle = [
+        "#222",
+        "#555",
+        "#c23d3d",
+        "#ced42a",
+        "#4946e0",
+        "#41c236",
+      ][field[i]];
+      ctx.fillRect(x * 10, y * 10, 9, 9);
+    }
+  }
+}
+
+// canvas.addEventListener("mousedown", (e) => {
+//   const x = Math.floor(e.offsetX / 10);
+//   const y = Math.floor(e.offsetY / 10);
+//   field[y * fieldWidth + x] = field[y * fieldWidth + x] % 4 + 1;
+//   draw()
+// });
+
+// Check if the block is linked from the left side to the right side
+function linked() {
+  const visited = new Array(field.length).fill(false);
+  for (let y = 0; y < fieldHeight; y++) {
+    const c = field[y * fieldWidth + 1];
+    if (c <= 1) continue;
+    let open = [y * fieldWidth + 1];
+    while (open.length) {
+      const newOpen = [];
+      for (const i of open) {
+        if (visited[i] || field[i] !== c) continue;
+        visited[i] = true;
+        newOpen.push(i - fieldWidth);
+        newOpen.push(i + fieldWidth);
+        newOpen.push(i - 1);
+        newOpen.push(i + 1);
+      }
+      open = newOpen;
+    }
+    for (let i = 0; i < fieldHeight; i++) {
+      if (visited[i * fieldWidth + fieldWidth - 2]) {
+        // Find!
+        for (let j = 0; j < field.length; ++j) {
+          if (visited[j])
+            field[j] = 0;
+        }
+        break;
+      }
+    }
+    visited.fill(false);
+  }
+}
+
+let tick = 0;
+
+function update() {
+  tick += 1;
+
+  for (let y = fieldHeight - 1; y >= 0; y--) {
+    for (let x = 0; x < fieldWidth; x++) {
+      const i = y * fieldWidth + x;
+      if (field[i] <= 1)
+        continue;
+      const down = (y + 1) * fieldWidth + x;
+      if (field[down] == 0) {
+        field[down] = field[i];
+        field[i] = 0;
+      } else {
+        const dx = Math.random() > 0.5 ? 1 : -1;
+        const side = (y + 1) * fieldWidth + x + dx;
+        if (field[side] == 0) {
+          field[side] = field[i];
+          field[i] = 0;
+        }
+      }
+    }
+  }
+
+  linked();
+
+  addBlock:
+  if (tick % 16 == 0) {
+    const size = 6;
+    const rx = Math.random() * (fieldWidth - size - 2) + 1 | 0;
+    const c = Math.random() * 3 + 2 | 0;
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const i = y * fieldWidth + rx + x;
+        if (field[i] !== 0) {
+          fieldReset();
+          break addBlock;
+        }
+        field[i] = c;
+      }
+    }
+  }
+}
+
+let time = Date.now();
+function loop() {
+  const current = Date.now();
+  while (1000 / 30 < current - time) {
+    update();
+    time += 1000 / 30;
+  }
+
+  draw();
+
+  requestAnimationFrame(loop);
+}
+loop();
+  </script>
+</body>
+</html>
