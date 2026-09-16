@@ -19,6 +19,7 @@
   --wound:#ff5a47;
   --glass:rgba(14,16,12,.86);
   --f-latin:"Chakra Petch","Zen Kaku Gothic New",system-ui,sans-serif;
+  --f-mono:ui-monospace,"SF Mono","DejaVu Sans Mono",Menlo,Consolas,monospace;
   --f-jp:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
 }
 @media (prefers-color-scheme: dark){
@@ -55,13 +56,18 @@ body.aiming #stage canvas{cursor:none}
 .keys{font-size:12px;color:var(--bone-dim);display:grid;grid-template-columns:auto auto;gap:3px 12px}
 .keys kbd{font-family:var(--f-latin);color:var(--bone);font-size:12px}
 
-#osd,#osd2{position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:1.4em;align-items:center;color:var(--phosphor);text-shadow:0 0 6px rgba(166,245,154,.5);white-space:nowrap;font-family:var(--f-latin);font-variant-numeric:tabular-nums;font-weight:500}
+#osd,#osd2{position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:1.4em;align-items:center;color:var(--phosphor);text-shadow:0 0 6px rgba(166,245,154,.5);white-space:pre;font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-weight:500;letter-spacing:.04em}
 #osd span,#osd2 span{font-family:inherit}
+#oState{display:inline-block;min-width:7ch}
 .breath{display:inline-flex;align-items:center;gap:.4em}
 .bar{display:inline-block;width:4.2em;height:.42em;border:1px solid rgba(166,245,154,.6);position:relative}
 .bar #oBreath{position:absolute;left:0;top:0;bottom:0;background:var(--phosphor);width:100%}
 .bar.low{border-color:var(--wound)}
 .bar.low #oBreath{background:var(--wound)}
+#impact{position:absolute;font-size:14px;left:0;top:0;width:2.2em;height:0;margin-left:-1.1em;display:none;pointer-events:none}
+#impact::before,#impact::after{content:"";position:absolute;top:-1px;width:.75em;height:2px;background:var(--phosphor);box-shadow:0 0 4px rgba(166,245,154,.8),0 0 0 1px rgba(0,0,0,.55)}
+#impact::before{left:0}
+#impact::after{right:0}
 
 #msgs{position:absolute;right:max(18px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));width:min(350px,calc(100vw - 36px));display:flex;flex-direction:column;gap:4px;pointer-events:none;text-align:left}
 .msg{display:grid;grid-template-columns:3.2em 1fr;gap:8px;padding:5px 8px;border-left:1px solid rgba(167,162,145,.3);background:rgba(0,0,0,.28);font-size:12px;line-height:1.5;opacity:.55;animation:msgIn .15s ease-out}
@@ -103,6 +109,11 @@ h2{font-family:var(--f-jp);font-weight:900;font-size:clamp(22px,3vw,28px);margin
 .sens{display:flex;align-items:center;gap:12px;font-size:13px;color:#cfc9b6;margin:0 0 20px}
 .sens input{flex:1;accent-color:var(--blaze);min-width:0}
 .sens output{font-family:var(--f-latin);font-weight:600;color:var(--bone);width:2.4em;text-align:right}
+.sens+.sens{margin-top:-10px}
+.sens.check{cursor:pointer}
+.sens.check input{flex:0 0 auto;width:17px;height:17px;min-width:0;accent-color:var(--blaze)}
+.sens.check span{flex:1}
+.sens.off{opacity:.45}
 .btns{display:flex;gap:10px;flex-wrap:wrap}
 button.primary,button.secondary{font-family:var(--f-jp);font-weight:700;font-size:16px;padding:14px 26px;border-radius:3px;cursor:pointer;letter-spacing:.05em}
 button.primary{background:var(--blaze);color:#1a0d02;border:1px solid var(--blaze)}
@@ -178,8 +189,9 @@ button:focus-visible{outline:2px solid var(--blaze);outline-offset:3px}
     <kbd>M</kbd><span>音</span>
     <kbd>Esc</kbd><span>一時停止</span>
   </div>
-  <div id="osd"><span id="oRng">距離 ---</span><span id="oZoom">×6.0</span><span id="oHdg">方位 000°</span></div>
-  <div id="osd2"><span id="oState">射撃可</span><span class="breath"><span>息</span><span class="bar" id="breathBar"><span id="oBreath"></span></span></span></div>
+  <div id="impact" aria-hidden="true"></div>
+  <div id="osd"><span id="oRng">RNG ---- M</span><span id="oZoom">MAG  6.0X</span><span id="oHdg">HDG 000°</span></div>
+  <div id="osd2"><span id="oState">READY</span><span class="breath"><span>BR</span><span class="bar" id="breathBar"><span id="oBreath"></span></span></span></div>
   <div id="msgs" role="log" aria-label="射撃ログ" aria-live="polite" aria-relevant="additions"></div>
 </div>
 
@@ -195,13 +207,13 @@ button:focus-visible{outline:2px solid var(--blaze);outline-offset:3px}
     <h1>Night Scope</h1>
     <p class="lead">暗視スコープ越しに、夜の牧草地にいる野ネズミを撃つ長距離狙撃ゲーム。</p>
     <div class="modes" role="radiogroup" aria-label="モード" id="modes">
-      <button class="mode" role="radio" data-mode="std" aria-checked="true"><span class="mname">標準</span><span class="mdesc">40匹・60発</span></button>
+      <button class="mode" role="radio" data-mode="std" aria-checked="true"><span class="mname">標準</span><span class="mdesc">20匹・30発</span></button>
       <button class="mode" role="radio" data-mode="sa" aria-checked="false"><span class="mname">スコアアタック</span><span class="mdesc">60秒・弾無制限・ネズミ3倍</span></button>
       <button class="mode" role="radio" data-mode="free" aria-checked="false"><span class="mname">フリー</span><span class="mdesc">時間も弾も無制限</span></button>
     </div>
     <p class="mode-note" id="modeNote"></p>
     <div class="rules">
-      <p><strong>頭に当てれば仕留められる</strong>が、胴体に当たると逃げられる。着弾の近くにいたネズミは驚いて走り出す。</p>
+      <p><strong>体のどこに当たっても仕留められる</strong>。頭を撃ち抜けば得点2倍。着弾の近くにいたネズミは驚いて走り出す。</p>
       <p>暗闇で光る目が目印。弾は秒速850mで飛び、重力で落下する。遠い相手ほど上を、走っている相手は進行方向の少し先を狙う。息を止めると照準のブレが収まる。</p>
     </div>
     <dl class="controls" id="ctlDesk">
@@ -214,11 +226,14 @@ button:focus-visible{outline:2px solid var(--blaze);outline-offset:3px}
     </dl>
     <dl class="controls is-hidden" id="ctlTouch">
       <dt>ドラッグ</dt><dd>照準を動かす</dd>
+      <dt>ジャイロ</dt><dd>端末を傾けて照準を動かす（下の設定でオン）</dd>
       <dt>撃つ</dt><dd>射撃</dd>
       <dt>＋ － / ピンチ</dt><dd>倍率を変える（3〜32倍）</dd>
       <dt>息を止める</dt><dd>長押しでブレを抑える</dd>
     </dl>
     <label class="sens">照準の感度<input type="range" id="sens" min="0.4" max="4" step="0.1" value="1.5"><output id="sensVal">1.5</output></label>
+    <label class="sens check is-hidden" id="gyroRow"><input type="checkbox" id="gyro"><span>ジャイロ照準　端末を傾けて狙う</span></label>
+    <label class="sens is-hidden" id="gsensRow">ジャイロ感度<input type="range" id="gsens" min="0.2" max="4" step="0.1" value="1"><output id="gsensVal">1.0</output></label>
     <div class="btns"><button class="primary" id="bStart">狙撃を始める</button></div>
     <p class="best" id="best"></p>
   </div>
@@ -229,6 +244,8 @@ button:focus-visible{outline:2px solid var(--blaze);outline-offset:3px}
     <h2>一時停止中</h2>
     <p class="hint" id="pauseHint">再開するとマウスが照準の操作に戻ります。</p>
     <label class="sens">照準の感度<input type="range" id="sens2" min="0.4" max="4" step="0.1" value="1.5"><output id="sensVal2">1.5</output></label>
+    <label class="sens check is-hidden" id="gyroRow2"><input type="checkbox" id="gyro2"><span>ジャイロ照準　端末を傾けて狙う</span></label>
+    <label class="sens is-hidden" id="gsensRow2">ジャイロ感度<input type="range" id="gsens2" min="0.2" max="4" step="0.1" value="1"><output id="gsensVal2">1.0</output></label>
     <div class="btns"><button class="primary" id="bResume">再開する</button><button class="secondary is-hidden" id="bFinish">終了して記録を見る</button><button class="secondary" id="bQuit">タイトルに戻る</button></div>
   </div>
 </section>
@@ -286,9 +303,9 @@ const CFG = {
 const MODES = {
   // Rank thresholds scaled by 5/3, matching the score change at 200m.
   // Separate best-score keys preserve old records without mixing scoring rules.
-  std:  { key:'std',  name:'標準', total:40, ammo:60, initial:14, maxActive:18, gap:[1.0, 1.6], time:0,
-          note:'全40匹、弾は60発。全部のネズミを仕留めるか逃げられるか、弾が尽きたら終了。',
-          ranks:[24200, 17500, 11000, 5500], bestKey:'ns-best-std' },
+  std:  { key:'std',  name:'標準', total:20, ammo:30, initial:12, maxActive:16, gap:[1.0, 1.6], time:0,
+          note:'全20匹、弾は30発。全部のネズミを仕留めるか逃げられるか、弾が尽きたら終了。',
+          ranks:[12100, 8800, 5500, 2800], bestKey:'ns-best-std' },
   sa:   { key:'sa',   name:'スコアアタック', total:Infinity, ammo:Infinity, initial:54, maxActive:66, gap:[0.17, 0.27], time:60,
           note:'制限時間60秒、弾は無制限。牧草地を埋め尽くすネズミを撃ってスコアを競う。',
           ranks:[14200, 10000, 6300, 3200], bestKey:'ns-best-sa' },
@@ -886,45 +903,154 @@ const ir = new THREE.SpotLight(0xffffff, 0.85, 0, 0.2, 1.0, 1);
 scene.add(ir); scene.add(ir.target);
 
 // ================= rats =================
+// Rat bodies are lofted from hand-tuned cross-sections rather than stacked spheres:
+// through the scope the silhouette is most of what sells the animal, so the profiles
+// carry the real anatomy (hips wider than shoulders, tapering snout, cupped ears).
+function loft(sections, radial, shade){
+  const rows = sections.length, pos = [], uv = [], col = [], idx = [];
+  for (let i=0;i<rows;i++){
+    const s = sections[i];
+    for (let j=0;j<=radial;j++){
+      const a = j/radial*Math.PI*2, ca = Math.cos(a), sa = Math.sin(a);
+      pos.push(ca*s.rx, s.y + sa*s.ry, s.z);
+      uv.push(j/radial*3, i/(rows-1)*2);
+      if (shade){ const v = 1.15 - 0.32*(0.5+0.5*sa); col.push(v, v, v*0.99); } // pale belly, dark spine
+    }
+  }
+  // Winding depends on which way the profile runs: with rows advancing along +z the
+  // outward face is (a, a+1, b), and it reverses for a profile built along -z.
+  const fwd = sections[rows-1].z > sections[0].z;
+  for (let i=0;i<rows-1;i++) for (let j=0;j<radial;j++){
+    const a = i*(radial+1)+j, b = a+radial+1;
+    if (fwd) idx.push(a, a+1, b, a+1, b+1, b);
+    else idx.push(a, b, a+1, a+1, b, b+1);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  if (shade) g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.setIndex(idx); g.computeVertexNormals();
+  return g;
+}
+function makeFurTex(){
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d'), R = mulberry(77);
+  g.fillStyle = '#b0aaa0'; g.fillRect(0,0,128,128);
+  for (let i=0;i<2800;i++){ // fine hairs, mostly combed along the body axis
+    const x = R()*128, y = R()*128, len = 2+R()*5, a = Math.PI/2 + (R()-0.5)*0.8;
+    const v = (R() < 0.5 ? 140+R()*70 : 210+R()*45)|0;
+    g.strokeStyle = 'rgba('+v+','+(v*0.97|0)+','+(v*0.92|0)+',0.45)'; g.lineWidth = R() < 0.2 ? 1.4 : 0.8;
+    g.beginPath(); g.moveTo(x, y); g.lineTo(x+Math.cos(a)*len, y+Math.sin(a)*len); g.stroke();
+  }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+}
+const furTex = makeFurTex();
 const RG = {
   s: new THREE.SphereGeometry(1, 14, 10),
   sLo: new THREE.SphereGeometry(1, 8, 6),
-  cone: new THREE.ConeGeometry(1, 1, 10),
-  tail: (function(){ const g = new THREE.CylinderGeometry(0.0035, 0.013, 0.34, 6, 1); g.translate(0, -0.17, 0); return g; })()
+  body: loft([
+    { z:-0.205, y:0.104, rx:0.004, ry:0.004 },
+    { z:-0.190, y:0.106, rx:0.042, ry:0.040 },
+    { z:-0.160, y:0.109, rx:0.074, ry:0.070 },
+    { z:-0.120, y:0.112, rx:0.091, ry:0.086 }, // hips, the widest point
+    { z:-0.070, y:0.114, rx:0.089, ry:0.086 },
+    { z:-0.020, y:0.116, rx:0.081, ry:0.079 },
+    { z: 0.030, y:0.117, rx:0.077, ry:0.076 },
+    { z: 0.080, y:0.118, rx:0.077, ry:0.075 },
+    { z: 0.120, y:0.121, rx:0.068, ry:0.066 },
+    { z: 0.155, y:0.127, rx:0.050, ry:0.051 },
+    { z: 0.180, y:0.132, rx:0.030, ry:0.032 }
+  ], 12, true),
+  head: loft([
+    { z:-0.035, y: 0.006, rx:0.004, ry:0.004 },
+    { z:-0.015, y: 0.006, rx:0.036, ry:0.034 },
+    { z: 0.015, y: 0.007, rx:0.049, ry:0.046 },
+    { z: 0.045, y: 0.007, rx:0.051, ry:0.049 }, // cheeks
+    { z: 0.071, y: 0.005, rx:0.046, ry:0.045 },
+    { z: 0.094, y: 0.002, rx:0.036, ry:0.037 },
+    { z: 0.116, y:-0.003, rx:0.027, ry:0.029 },
+    { z: 0.135, y:-0.007, rx:0.019, ry:0.021 },
+    { z: 0.151, y:-0.011, rx:0.011, ry:0.013 },
+    { z: 0.160, y:-0.014, rx:0.003, ry:0.004 }
+  ], 12, true),
+  tail: loft([ // built pointing -z from the pivot, with the tip curling up
+    { z: 0.010, y: 0.000, rx:0.0130, ry:0.0130 },
+    { z:-0.060, y:-0.006, rx:0.0105, ry:0.0105 },
+    { z:-0.130, y:-0.016, rx:0.0082, ry:0.0082 },
+    { z:-0.200, y:-0.022, rx:0.0060, ry:0.0060 },
+    { z:-0.265, y:-0.018, rx:0.0040, ry:0.0040 },
+    { z:-0.320, y:-0.005, rx:0.0022, ry:0.0022 },
+    { z:-0.350, y: 0.006, rx:0.0006, ry:0.0006 }
+  ], 7, false),
+  // Limbs are lofted along +z and rotated nose-down at build time; the profile's y
+  // offset becomes the limb's fore/aft bend once rotated.
+  legF: loft([ // shoulder down to wrist
+    { z:0.000, y: 0.000, rx:0.022, ry:0.024 },
+    { z:0.026, y: 0.003, rx:0.017, ry:0.018 },
+    { z:0.052, y: 0.002, rx:0.011, ry:0.011 },
+    { z:0.070, y: 0.000, rx:0.007, ry:0.007 }
+  ], 7, false),
+  legR: loft([ // heavier haunch, hock kicked backwards
+    { z:0.000, y: 0.000, rx:0.032, ry:0.035 },
+    { z:0.030, y:-0.012, rx:0.024, ry:0.026 },
+    { z:0.056, y:-0.006, rx:0.012, ry:0.012 },
+    { z:0.080, y: 0.000, rx:0.008, ry:0.008 }
+  ], 7, false),
+  ear: new THREE.SphereGeometry(1, 10, 6, 0, Math.PI*2, 0, Math.PI*0.6) // open bowl = cupped pinna
 };
+const furMat = c => new THREE.MeshLambertMaterial({ color:c, map:furTex, vertexColors:true });
 const RM = {
-  fur: new THREE.MeshLambertMaterial({ color:0x8c8479 }),
-  furDark: new THREE.MeshLambertMaterial({ color:0x655e56 }),
-  skin: new THREE.MeshLambertMaterial({ color:0x9c8680 }),
-  eye: new THREE.MeshBasicMaterial({ color:0x151515 })
+  // A few coat shades so a field of rats does not read as clones.
+  coats: [furMat(0x8f887c), furMat(0x7d766c), furMat(0x9c948a)],
+  furDark: new THREE.MeshLambertMaterial({ color:0x6b645b, map:furTex }),
+  skin: new THREE.MeshLambertMaterial({ color:0xa78b84 }),
+  ear: new THREE.MeshLambertMaterial({ color:0x9d8279, side:THREE.DoubleSide }),
+  eye: new THREE.MeshPhongMaterial({ color:0x121212, shininess:80, specular:0x9aa6b0 })
 };
 function part(geo, mat, sx,sy,sz, px,py,pz, parent){ const m = new THREE.Mesh(geo, mat); m.scale.set(sx,sy,sz); m.position.set(px,py,pz); parent.add(m); return m; }
 function buildRat(){
+  const coat = RM.coats[(rnd()*RM.coats.length)|0];
   const root = new THREE.Group();
   const tilt = new THREE.Group(); root.add(tilt);
   const rearG = new THREE.Group(); rearG.position.z = -0.12; tilt.add(rearG);
   const body = new THREE.Group(); body.position.z = 0.12; rearG.add(body);
-  part(RG.s, RM.fur, 0.08,0.072,0.16, 0,0.092,0.02, body);
-  part(RG.s, RM.furDark, 0.092,0.084,0.105, 0,0.098,-0.085, body);
-  const neck = new THREE.Group(); neck.rotation.order = 'YXZ'; neck.position.set(0, 0.115, 0.13); body.add(neck);
-  part(RG.s, RM.fur, 0.052,0.048,0.072, 0,0.008,0.06, neck);
-  const sn = part(RG.cone, RM.fur, 0.03,0.075,0.028, 0,-0.002,0.15, neck); sn.rotation.x = Math.PI/2;
-  part(RG.sLo, RM.skin, 0.011,0.01,0.01, 0,-0.004,0.19, neck);
-  const eL = part(RG.sLo, RM.skin, 0.028,0.03,0.007, 0.034,0.052,0.035, neck); eL.rotation.y = 0.5;
-  const eR = part(RG.sLo, RM.skin, 0.028,0.03,0.007, -0.034,0.052,0.035, neck); eR.rotation.y = -0.5;
-  part(RG.sLo, RM.eye, 0.01,0.01,0.01, 0.034,0.02,0.1, neck);
-  part(RG.sLo, RM.eye, 0.01,0.01,0.01, -0.034,0.02,0.1, neck);
-  const eyeL = new THREE.Object3D(); eyeL.position.set(0.037, 0.021, 0.112); neck.add(eyeL);
-  const eyeR = new THREE.Object3D(); eyeR.position.set(-0.037, 0.021, 0.112); neck.add(eyeR);
-  const headHit = new THREE.Object3D(); headHit.position.set(0, 0.008, 0.085); headHit.scale.set(0.072, 0.066, 0.115); neck.add(headHit);
-  const bodyHit = new THREE.Object3D(); bodyHit.position.set(0, 0.096, -0.01); bodyHit.scale.set(0.09, 0.086, 0.175); body.add(bodyHit);
-  const tailPivot = new THREE.Group(); tailPivot.position.set(0, 0.075, -0.18); body.add(tailPivot);
-  const tail = new THREE.Mesh(RG.tail, RM.skin); tail.rotation.x = Math.PI/2 - 0.2; tailPivot.add(tail);
-  const legBase = [[0.05,0.028,0.1],[-0.05,0.028,0.1],[0.062,0.03,-0.1],[-0.062,0.03,-0.1]];
-  const legs = legBase.map(b => part(RG.sLo, RM.furDark, 0.022,0.032,0.034, b[0],b[1],b[2], body));
-  return { root, tilt, rearG, body, neck, tailPivot, legs, legBase, eyeL, eyeR, headHit, bodyHit };
+  // The trunk bobs with the gait while the legs hang off `body`, so a planted foot
+  // stays planted instead of being lifted by the body's own bounce.
+  const trunk = new THREE.Group(); body.add(trunk);
+  part(RG.body, coat, 1,1,1, 0,0,0, trunk);
+  const neck = new THREE.Group(); neck.rotation.order = 'YXZ'; neck.position.set(0, 0.137, 0.13); trunk.add(neck);
+  part(RG.head, coat, 1,1,1, 0,0,0, neck);
+  part(RG.sLo, RM.skin, 0.012,0.011,0.011, 0,-0.014,0.158, neck); // nose
+  const ears = [1,-1].map(s => {
+    const e = part(RG.ear, RM.ear, 0.040,0.014,0.042, s*0.047,0.052,0.008, neck);
+    e.rotation.set(-0.30, -s*0.62, s*0.80); // cup opening ends up facing out, forward and a little down
+    return e;
+  });
+  part(RG.sLo, RM.eye, 0.011,0.011,0.010, 0.035,0.023,0.078, neck);
+  part(RG.sLo, RM.eye, 0.011,0.011,0.010, -0.035,0.023,0.078, neck);
+  const eyeL = new THREE.Object3D(); eyeL.position.set(0.039, 0.024, 0.082); neck.add(eyeL);
+  const eyeR = new THREE.Object3D(); eyeR.position.set(-0.039, 0.024, 0.082); neck.add(eyeR);
+  const headHit = new THREE.Object3D(); headHit.position.set(0, 0.005, 0.063); headHit.scale.set(0.070, 0.064, 0.102); neck.add(headHit);
+  const bodyHit = new THREE.Object3D(); bodyHit.position.set(0, 0.115, -0.01); bodyHit.scale.set(0.090, 0.086, 0.180); trunk.add(bodyHit);
+  const tailPivot = new THREE.Group(); tailPivot.position.set(0, 0.098, -0.19); trunk.add(tailPivot);
+  const tail = new THREE.Mesh(RG.tail, RM.skin); tail.rotation.x = -0.14; tailPivot.add(tail);
+  const legBase = [[0.048,0.050,0.10],[-0.048,0.050,0.10],[0.060,0.052,-0.10],[-0.060,0.052,-0.10]];
+  const legs = legBase.map((b, i) => {
+    const g = new THREE.Group(); g.position.set(b[0], b[1], b[2]); body.add(g);
+    const limb = new THREE.Mesh(i < 2 ? RG.legF : RG.legR, RM.furDark);
+    limb.rotation.x = Math.PI/2; limb.position.y = i < 2 ? 0.020 : 0.028; // +z profile swung to hang down, foot landing at ground level
+    g.add(limb);
+    const foot = part(RG.sLo, RM.skin, 0.010, 0.006, i < 2 ? 0.020 : 0.028, 0, i < 2 ? -0.050 : -0.052, i < 2 ? 0.008 : 0.012, g);
+    foot.rotation.x = 0.1;
+    return g;
+  });
+  return { root, tilt, rearG, body, trunk, neck, tailPivot, legs, legBase, ears, eyeL, eyeR, headHit, bodyHit };
 }
 
+const TAU = Math.PI*2;
+const LEG_LEN = 0.075, LEG_WMAX = 50;              // hip-to-foot reach, and the step-rate ceiling in rad/s
+const GAIT_TROT = [0, Math.PI, Math.PI, 0];        // legs are [front-R, front-L, hind-R, hind-L]
+const GAIT_BOUND = [0, 0, 2.3, 2.3];
 const rats = [];
 const hittable = r => r.state !== 'dead' && r.state !== 'burrow' && !r.removed && r.emerge > 0.5;
 function inField(x, z){ return z <= FIELD.zNear && z >= FIELD.zFar && Math.abs(x) <= xLimit(z); }
@@ -1076,14 +1202,35 @@ function poseRat(r, dt){
   const sniff = (r.state === 'idle' || r.state === 'startle') ? Math.sin(r.anim*17 + r.phase)*0.035 : 0;
   r.neck.rotation.x = r.neckP + r.rearV*0.6 + sniff + r.fall*0.25;
   r.neck.rotation.y = r.neckY;
-  const mv = Math.min(1, r.curSpeed/1.0);
-  r.gait += dt*(5 + r.curSpeed*6);
-  for (let i=0;i<4;i++){
-    const ph = r.gait + (i < 2 ? 0 : Math.PI) + (i%2 ? 0.4 : 0), b = r.legBase[i];
-    r.legs[i].position.z = b[2] + Math.sin(ph)*0.035*mv;
-    r.legs[i].position.y = b[1] + Math.max(0, Math.cos(ph))*0.02*mv + (r.fall > 0 ? 0.01*r.fall : 0);
+  // Gait. Step rate follows ground speed so the stance foot stays planted instead of
+  // skating: the stance half-cycle carries the body 2*LEG*sin(swing) over PI/w seconds,
+  // so w = PI*v/(2*LEG*sin(swing)). Past LEG_WMAX that rate only strobes at 60fps, so
+  // the stride widens instead of the feet spinning faster.
+  const v = r.curSpeed, mv = Math.min(1, v/1.2);
+  let swing = 0.55, w = Math.PI*v/(2*LEG_LEN*Math.sin(swing));
+  if (w > LEG_WMAX){
+    w = LEG_WMAX;
+    swing = Math.asin(Math.min(0.86, Math.PI*v/(2*LEG_WMAX*LEG_LEN))); // a 59-degree reach is as far as a rat opens up
   }
-  r.body.position.y = Math.abs(Math.sin(r.gait))*0.014*mv;
+  r.gait += dt*(v > 0.03 ? w : 0);
+  // Diagonal trot at a walk, hind pair leading a bound once it is really running.
+  const bnd = clamp((v - 1.2)/1.8, 0, 1);
+  const amp = Math.min(1, v/0.25), reach = Math.sin(swing)*amp;
+  for (let i=0;i<4;i++){
+    const ph = r.gait + GAIT_TROT[i] + (GAIT_BOUND[i] - GAIT_TROT[i])*bnd;
+    let u = ph % TAU; if (u < 0) u += TAU;   // u: 0 = lift-off, PI = touch-down
+    // Driving the foot's fore/aft offset (not the hip angle) keeps it moving at a
+    // constant rate through stance, which is exactly the speed the ground passes by.
+    const x = u < Math.PI ? -Math.cos(u) : 1 - 2*(u - Math.PI)/Math.PI;
+    const b = r.legBase[i], leg = r.legs[i];
+    leg.position.y = b[1] + (u < Math.PI ? Math.sin(u)*0.011*amp : 0) + (r.fall > 0 ? 0.012*r.fall : 0);
+    leg.rotation.x = -Math.asin(reach*x) - r.rearV*(i < 2 ? 0.5 : 0.1);
+  }
+  const twitch = mv < 0.3 ? Math.sin(r.anim*2.7 + r.phase*3)*0.12 : 0; // ears flick when settled
+  r.ears[0].rotation.x = -0.30 + twitch; r.ears[1].rotation.x = -0.30 - twitch*0.7;
+  // Spine flexion: a little bob at a walk, a real arch-and-extend once bounding.
+  r.trunk.position.y = amp*(0.008*Math.abs(Math.sin(r.gait)) + 0.022*bnd*Math.max(0, Math.sin(r.gait + 0.9)));
+  r.rearG.rotation.x += bnd*amp*Math.sin(r.gait + 1.2)*0.13;
   r.tailPivot.rotation.y = r.state === 'dead' ? 0.2 : Math.sin(r.anim*2.2 + r.phase)*0.3*(1 - mv*0.5);
   r.tailPivot.rotation.x = -0.12*mv;
   r.root.updateMatrixWorld(true);
@@ -1208,11 +1355,14 @@ const Audio = (function(){
 })();
 
 // ================= game state =================
-const G = { mode:'title', score:0, kills:0, escaped:0, wounds:0, shots:0, streak:0, bestStreak:0, longest:0, ammo:0, boltT:0, spawned:0, spawnT:0, endWait:0, timeLeft:0, timeUp:false, elapsed:0 };
+const G = { mode:'title', score:0, kills:0, escaped:0, heads:0, shots:0, streak:0, bestStreak:0, longest:0, ammo:0, boltT:0, spawned:0, spawnT:0, endWait:0, timeLeft:0, timeUp:false, elapsed:0 };
 const bullets = [];
 let yaw = 0, pitch = -0.035, zoom = CFG.zoomStart, zoomTarget = CFG.zoomStart;
 let aimDX = 0, aimDY = 0, zoomHold = 0;
 let sens = parseFloat(store.get('ns-sens', '1.5')) || 1.5;
+let gyroDYaw = 0, gyroDPitch = 0;
+let gyroSens = parseFloat(store.get('ns-gsens', '1')) || 1;
+const GYRO_GAIN = 0.02; // 1/50 of true device rotation at gyroSens = 1
 let breath = 1, exhausted = false, keyHold = false, mouseHold = false, btnHold = false, swayAmp = 0.0005;
 let recoilT = 9, recoilKick = 0, recoilYawKick = 0, flash = 0;
 let simTime = 0, realTime = 0;
@@ -1226,7 +1376,7 @@ function circleRad(){ return (CFG.baseDeg/zoom)*Math.PI/180; }
 
 // ================= HUD =================
 const ui = {};
-['score','kills','esc','streak','remain','reserve','mag','osd','osd2','oRng','oZoom','oHdg','oState','oBreath','breathBar','msgs','hud','touch','title','pause','result','best','keys','ctlDesk','ctlTouch','pauseHint','bMute','trLabel','modeNote','bFinish'].forEach(id => ui[id] = $(id));
+['score','kills','esc','streak','remain','reserve','mag','osd','osd2','oRng','impact','oZoom','oHdg','oState','oBreath','breathBar','msgs','hud','touch','title','pause','result','best','keys','ctlDesk','ctlTouch','pauseHint','bMute','trLabel','modeNote','bFinish'].forEach(id => ui[id] = $(id));
 const chamber = ui.mag.firstElementChild;
 const hudCache = {};
 function setT(key, v){ if (hudCache[key] !== v){ hudCache[key] = v; ui[key].textContent = v; } }
@@ -1249,14 +1399,14 @@ function updateHUD(){
   setT('reserve', isFinite(G.ammo) ? String(G.ammo) : '∞');
   const fill = G.ammo <= 0 ? 0 : G.boltT > 0 ? Math.round((1 - G.boltT/CFG.cooldown)*20)/20 : 1;
   if (hudCache.fill !== fill){ hudCache.fill = fill; chamber.style.setProperty('--fill', fill); chamber.classList.toggle('on', fill >= 1); }
-  setT('oZoom', '×' + zoom.toFixed(1));
+  setT('oZoom', 'MAG ' + zoom.toFixed(1).padStart(4) + 'X');
   const hdg = Math.round(((-view.yaw*180/Math.PI) % 360 + 360) % 360);
-  setT('oHdg', '方位 ' + String(hdg).padStart(3, '0') + '°');
+  setT('oHdg', 'HDG ' + String(hdg).padStart(3, '0') + '°');
   let st;
-  if (G.timeUp) st = 'タイムアップ';
-  else if (G.ammo <= 0) st = '弾切れ';
-  else if (G.boltT > 0) st = '次弾装填';
-  else st = '射撃可';
+  if (G.timeUp) st = 'TIME UP';
+  else if (G.ammo <= 0) st = 'EMPTY';
+  else if (G.boltT > 0) st = 'CYCLING';
+  else st = 'READY';
   setT('oState', st);
   ui.oBreath.style.width = (breath*100).toFixed(1) + '%';
   ui.breathBar.classList.toggle('low', exhausted);
@@ -1425,30 +1575,26 @@ function nearbyStartle(px, pz, exclude, strongR, weakR, strongChance){
 }
 function onRatHit(r, part, point){
   const dist = Math.round(camPos.distanceTo(point));
-  if (part === 'head'){
-    const moving = r.curSpeed > 1.2;
-    killRat(r);
-    G.kills++; G.streak++; G.bestStreak = Math.max(G.bestStreak, G.streak); G.longest = Math.max(G.longest, dist);
-    // Keep a 100m hit worth 200 points; doubling distance quadruples its bonus.
-    let pts = 100 + Math.round(dist*dist/100);
-    if (moving) pts = Math.round(pts*1.5);
-    pts += Math.min(G.streak-1, 8)*25;
-    G.score += pts;
-    let sub = `${dist}m　+${pts}`;
-    if (moving) sub += '　動く標的';
-    if (G.streak > 1) sub += `　${G.streak}連続`;
-    showMsg('ヘッドショット', sub, 'head');
-    spawnPuff(point, 'head');
-    Audio.hit(true);
-    nearbyStartle(r.x, r.z, r, 0, 6, 0);
-  } else {
-    G.wounds++; G.streak = 0;
-    flee(r, point.x, point.z);
-    showMsg('胴体に命中', `${dist}m　逃げられた`, 'wound');
-    spawnPuff(point, 'body');
-    Audio.hit(false);
-    nearbyStartle(r.x, r.z, r, 3, 11, 0.35);
-  }
+  const head = part === 'head';
+  const moving = r.curSpeed > 1.2;
+  killRat(r);
+  G.kills++; G.streak++; G.bestStreak = Math.max(G.bestStreak, G.streak); G.longest = Math.max(G.longest, dist);
+  if (head) G.heads++;
+  // A 100m body hit is worth 100 points; doubling distance quadruples its bonus.
+  // Headshots double the shot value (so they score what they did when only headshots killed).
+  let pts = 50 + Math.round(dist*dist/200);
+  if (moving) pts = Math.round(pts*1.5);
+  if (head) pts *= 2;
+  pts += Math.min(G.streak-1, 8)*25;
+  G.score += pts;
+  let sub = `${dist}m　+${pts}`;
+  if (head) sub += '　×2';
+  if (moving) sub += '　動く標的';
+  if (G.streak > 1) sub += `　${G.streak}連続`;
+  showMsg(head ? 'ヘッドショット' : '命中', sub, head ? 'head' : 'wound');
+  spawnPuff(point, part);
+  Audio.hit(head);
+  nearbyStartle(r.x, r.z, r, 0, 6, 0);
 }
 function onGroundHit(point){
   G.streak = 0;
@@ -1460,6 +1606,35 @@ function onGroundHit(point){
   else showMsg('外れ', '', 'miss');
 }
 let rangeT = 0;
+let impactDrop = NaN; // how far below the aim line the bullet lands, as an angle
+const _tp0 = new THREE.Vector3(), _tp1 = new THREE.Vector3(), _tv = new THREE.Vector3();
+// Fly a ghost bullet along the current aim with the same physics as updateBullets
+// (coarser chords), and return the angle between the aim line and where it lands.
+function predictDrop(dir){
+  _tp0.copy(camPos).addScaledVector(dir, 0.6);
+  _tv.copy(dir).multiplyScalar(CFG.muzzle);
+  const stepDt = 1/60;
+  for (let dist=0; dist<1200;){
+    _tp1.copy(_tp0).addScaledVector(_tv, stepDt);
+    _tp1.y -= 0.5*CFG.gravity*stepDt*stepDt;
+    const rc = castRats(_tp0, _tp1), tt = segTerrain(_tp0, _tp1);
+    const hitT = rc.rat && rc.t <= tt ? rc.t : tt;
+    if (hitT !== Infinity){
+      _tp0.lerp(_tp1, hitT).sub(camPos);
+      return view.pitch - Math.atan2(_tp0.y, Math.hypot(_tp0.x, _tp0.z));
+    }
+    dist += _tp0.distanceTo(_tp1);
+    _tp0.copy(_tp1);
+    _tv.y -= CFG.gravity*stepDt;
+  }
+  return NaN;
+}
+function updateImpact(){
+  const R = D/2, py = Math.tan(impactDrop)/Math.tan(view.circleRad/2)*R;
+  const show = G.mode === 'playing' && py === py && py > -R*0.9 && py < R*0.9;
+  if (hudCache.impactShow !== show){ hudCache.impactShow = show; ui.impact.style.display = show ? 'block' : 'none'; }
+  if (show) ui.impact.style.transform = `translate(${W/2}px,${(Hh/2 + py).toFixed(1)}px)`;
+}
 function updateRange(dt){
   rangeT -= dt; if (rangeT > 0) return; rangeT = 0.1;
   const dir = viewDir(view.yaw, view.pitch, _v2);
@@ -1473,7 +1648,8 @@ function updateRange(dt){
   _p0.copy(camPos); _p1.copy(camPos).addScaledVector(dir, Math.min(range, 1200));
   const rc = castRats(_p0, _p1);
   if (rc.rat) range = rc.t*Math.min(range, 1200);
-  setT('oRng', range === Infinity ? '距離 ---' : `距離 ${Math.round(range)}m`);
+  impactDrop = predictDrop(dir);
+  setT('oRng', 'RNG ' + (range === Infinity ? '----' : String(Math.round(range)).padStart(4)) + ' M');
 }
 
 // ================= flow =================
@@ -1481,10 +1657,11 @@ function clearRats(){ for (const r of rats) scene.remove(r.root); rats.length = 
 function startGame(){
   Audio.init();
   clearRats();
-  Object.assign(G, { mode:'playing', score:0, kills:0, escaped:0, wounds:0, shots:0, streak:0, bestStreak:0, longest:0, ammo:MODE.ammo, boltT:0, spawned:0, spawnT:1.5, endWait:0, timeLeft:MODE.time, timeUp:false, elapsed:0 });
+  Object.assign(G, { mode:'playing', score:0, kills:0, escaped:0, heads:0, shots:0, streak:0, bestStreak:0, longest:0, ammo:MODE.ammo, boltT:0, spawned:0, spawnT:1.5, endWait:0, timeLeft:MODE.time, timeUp:false, elapsed:0 });
   for (let i=0;i<MODE.initial;i++) spawnRat(true);
   hudCache.urgent = undefined; ui.remain.classList.remove('urgent');
   yaw = 0; pitch = -0.035; zoom = zoomTarget = CFG.zoomStart; breath = 1; exhausted = false;
+  bindGyro(gyroOn);
   ui.title.classList.add('is-hidden'); ui.result.classList.add('is-hidden'); ui.pause.classList.add('is-hidden');
   ui.hud.classList.remove('is-hidden');
   ui.touch.classList.toggle('is-hidden', !touchUI);
@@ -1495,7 +1672,7 @@ function startGame(){
   if (!touchUI) requestLock();
 }
 function toTitle(){
-  G.mode = 'title';
+  G.mode = 'title'; bindGyro(false);
   clearRats();
   for (let i=0;i<16;i++) spawnRat(true);
   ui.hud.classList.add('is-hidden'); ui.touch.classList.add('is-hidden');
@@ -1521,7 +1698,7 @@ $('modes').addEventListener('keydown', e => {
 });
 function pause(){
   if (G.mode !== 'playing') return;
-  G.mode = 'paused'; keyHold = mouseHold = false;
+  G.mode = 'paused'; keyHold = mouseHold = false; bindGyro(false);
   ui.pause.classList.remove('is-hidden');
   ui.pauseHint.textContent = touchUI || lockFailed ? '再開すると続きから撃てます。' : '再開するとマウスが照準の操作に戻ります。';
   ui.bFinish.classList.toggle('is-hidden', MODE.key !== 'free');
@@ -1530,12 +1707,12 @@ function pause(){
 }
 function resume(){
   if (G.mode !== 'paused') return;
-  G.mode = 'playing';
+  G.mode = 'playing'; bindGyro(gyroOn);
   ui.pause.classList.add('is-hidden');
   document.body.classList.toggle('aiming', !touchUI);
 }
 function endGame(reason){
-  G.mode = 'ended';
+  G.mode = 'ended'; bindGyro(false);
   if (document.pointerLockElement) document.exitPointerLock();
   document.body.classList.remove('aiming');
   ui.remain.classList.remove('urgent'); hudCache.urgent = undefined;
@@ -1567,8 +1744,9 @@ function endGame(reason){
   if (MODE.key === 'std') rows.push(['撃たずに残った', `${MODE.total - G.kills - G.escaped}匹`]);
   rows.push(
     ['撃った弾', `${G.shots}発`],
-    ['ヘッドショット率', `${Math.round(acc*100)}%`],
-    ['最長ヘッドショット', G.longest ? `${G.longest}m` : '―'],
+    ['命中率', `${Math.round(acc*100)}%`],
+    ['ヘッドショット', G.kills ? `${G.heads}回（${Math.round(G.heads/G.kills*100)}%）` : '―'],
+    ['最長キル', G.longest ? `${G.longest}m` : '―'],
     ['最大連続', `${G.bestStreak}回`]
   );
   if (ranked){
@@ -1687,15 +1865,53 @@ $('bResume').addEventListener('click', () => {
   Audio.init();
   if (touchUI || lockFailed) resume(); else requestLock();
 });
-function bindSens(inputId, outId){
-  const inp = $(inputId), out = $(outId);
-  inp.value = sens; out.textContent = sens.toFixed(1);
-  inp.addEventListener('input', () => {
-    sens = parseFloat(inp.value); store.set('ns-sens', sens);
-    for (const [a, b] of [['sens','sensVal'],['sens2','sensVal2']]){ $(a).value = sens; $(b).textContent = sens.toFixed(1); }
-  });
+function bindSlider(ids, get, set){
+  const sync = v => { for (const [a, b] of ids){ $(a).value = v; $(b).textContent = v.toFixed(1); } };
+  for (const [a] of ids) $(a).addEventListener('input', e => { const v = parseFloat(e.target.value); set(v); sync(v); });
+  sync(get());
 }
-bindSens('sens', 'sensVal'); bindSens('sens2', 'sensVal2');
+bindSlider([['sens','sensVal'],['sens2','sensVal2']], () => sens, v => { sens = v; store.set('ns-sens', v); });
+bindSlider([['gsens','gsensVal'],['gsens2','gsensVal2']], () => gyroSens, v => { gyroSens = v; store.set('ns-gsens', v); });
+
+// ---- gyro aiming (Splatoon-style: device rotation deltas move the reticle) ----
+const gyroSupported = isCoarse && typeof DeviceOrientationEvent !== 'undefined';
+let gyroOn = false, gyroBound = false, gyroHas = false, gPrevY = 0, gPrevP = 0;
+const _gq = new THREE.Quaternion(), _ge = new THREE.Euler(), _gq0 = new THREE.Quaternion();
+const _gqFlip = new THREE.Quaternion(-Math.SQRT1_2, 0, 0, Math.SQRT1_2); // -90deg X: screen -> viewing axis
+const _gzAxis = new THREE.Vector3(0, 0, 1);
+const RAD = Math.PI/180;
+function onDeviceOrientation(e){
+  if (e.alpha == null || e.beta == null || e.gamma == null) return;
+  const orient = ((screen.orientation && screen.orientation.angle) || window.orientation || 0)*RAD;
+  _ge.set(e.beta*RAD, e.alpha*RAD, -e.gamma*RAD, 'YXZ');
+  _gq.setFromEuler(_ge).multiply(_gqFlip).multiply(_gq0.setFromAxisAngle(_gzAxis, -orient));
+  _ge.setFromQuaternion(_gq, 'YXZ');
+  if (gyroHas){ gyroDYaw += wrapA(_ge.y - gPrevY); gyroDPitch += wrapA(_ge.x - gPrevP); }
+  gPrevY = _ge.y; gPrevP = _ge.x; gyroHas = true;
+}
+function resetGyro(){ gyroHas = false; gyroDYaw = gyroDPitch = 0; }
+function bindGyro(on){
+  if (on === gyroBound) return;
+  gyroBound = on; resetGyro();
+  if (on) addEventListener('deviceorientation', onDeviceOrientation);
+  else removeEventListener('deviceorientation', onDeviceOrientation);
+}
+async function setGyro(on){
+  if (on && DeviceOrientationEvent.requestPermission){
+    try { on = (await DeviceOrientationEvent.requestPermission()) === 'granted'; }
+    catch (err) { on = false; }
+  }
+  gyroOn = on; store.set('ns-gyro', on ? '1' : '0');
+  for (const id of ['gyro','gyro2']) $(id).checked = on;
+  for (const id of ['gsensRow','gsensRow2']) $(id).classList.toggle('off', !on);
+  bindGyro(on && (G.mode === 'playing'));
+}
+if (gyroSupported){
+  for (const id of ['gyroRow','gyroRow2','gsensRow','gsensRow2']) $(id).classList.remove('is-hidden');
+  for (const id of ['gsensRow','gsensRow2']) $(id).classList.add('off');
+  for (const id of ['gyro','gyro2']) $(id).addEventListener('change', e => setGyro(e.target.checked));
+  if (store.get('ns-gyro', '0') === '1') setGyro(true);
+}
 document.body.classList.toggle('touch-ui', touchUI);
 if (touchUI){ ui.ctlDesk.classList.add('is-hidden'); ui.ctlTouch.classList.remove('is-hidden'); }
 
@@ -1703,12 +1919,13 @@ if (touchUI){ ui.ctlDesk.classList.add('is-hidden'); ui.ctlTouch.classList.remov
 function updateAim(dt){
   if (G.mode === 'title'){
     yaw = Math.sin(realTime*0.045)*0.42; pitch = -0.03 + Math.sin(realTime*0.07)*0.012;
-    zoom += (4.5 - zoom)*Math.min(1, dt*2); aimDX = aimDY = 0;
+    zoom += (4.5 - zoom)*Math.min(1, dt*2); aimDX = aimDY = 0; gyroDYaw = gyroDPitch = 0;
   } else {
     const cr = circleRad();
     const perPx = cr/D*sens;
     if (G.mode === 'playing'){
       yaw -= aimDX*perPx; pitch -= aimDY*perPx;
+      if (gyroOn){ const g = GYRO_GAIN*gyroSens; yaw += gyroDYaw*g; pitch += gyroDPitch*g; }
       if (lockFailed && !locked && mouseIn && !touchUI){
         const ex = (mx - W/2)/(W/2), ey = (my - Hh/2)/(Hh/2);
         if (Math.abs(ex) > 0.9) yaw -= Math.sign(ex)*((Math.abs(ex)-0.9)/0.1)*cr*1.4*dt;
@@ -1716,7 +1933,7 @@ function updateAim(dt){
       }
       if (zoomHold) zoomTarget = clamp(zoomTarget*Math.exp(zoomHold*dt*1.8), CFG.zoomMin, CFG.zoomMax);
     }
-    aimDX = aimDY = 0;
+    aimDX = aimDY = 0; gyroDYaw = gyroDPitch = 0;
     yaw = clamp(yaw, -1.2, 1.2); pitch = clamp(pitch, -0.4, 0.16);
     zoom = Math.exp(lerp(Math.log(zoom), Math.log(zoomTarget), 1 - Math.exp(-dt*14)));
   }
@@ -1804,7 +2021,7 @@ function frame(now){
   renderer.setRenderTarget(null);
   renderer.render(postScene, postCam);
 
-  if (G.mode !== 'title'){ updateRange(dt); updateHUD(); }
+  if (G.mode !== 'title'){ updateRange(dt); updateImpact(); updateHUD(); }
 }
 
 layout();
