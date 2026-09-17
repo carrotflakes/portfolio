@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Night Scope ｜ 暗視スコープのネズミ狙撃</title>
+<title>Night Scope Barn ｜ 暗視スコープで納屋のネズミ退治</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@400;700;900&display=swap" rel="stylesheet">
@@ -64,10 +64,6 @@ body.aiming #stage canvas{cursor:none}
 .bar #oBreath{position:absolute;left:0;top:0;bottom:0;background:var(--phosphor);width:100%}
 .bar.low{border-color:var(--wound)}
 .bar.low #oBreath{background:var(--wound)}
-#impact{position:absolute;font-size:14px;left:0;top:0;width:2.2em;height:0;margin-left:-1.1em;display:none;pointer-events:none}
-#impact::before,#impact::after{content:"";position:absolute;top:-1px;width:.75em;height:2px;background:var(--phosphor);box-shadow:0 0 4px rgba(166,245,154,.8),0 0 0 1px rgba(0,0,0,.55)}
-#impact::before{left:0}
-#impact::after{right:0}
 
 #msgs{position:absolute;right:max(18px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));width:min(350px,calc(100vw - 36px));display:flex;flex-direction:column;gap:4px;pointer-events:none;text-align:left}
 .msg{display:grid;grid-template-columns:3.2em 1fr;gap:8px;padding:5px 8px;border-left:1px solid rgba(167,162,145,.3);background:rgba(0,0,0,.28);font-size:12px;line-height:1.5;opacity:.55;animation:msgIn .15s ease-out}
@@ -157,6 +153,7 @@ button:focus-visible{outline:2px solid var(--blaze);outline-offset:3px}
   .row b{font-size:15px}
 }
 @media (prefers-reduced-motion: reduce){ .big.urgent{animation:none} .msg{animation:none} }
+.stagetag{font-family:var(--f-latin);font-weight:600;font-size:14px;letter-spacing:.32em;color:var(--blaze);margin:0 0 4px}
 .stagelink{display:inline-block;margin-top:10px;font-size:13px;color:var(--bone-dim)}
 .stagelink:hover{color:var(--bone)}
 </style>
@@ -191,7 +188,6 @@ button:focus-visible{outline:2px solid var(--blaze);outline-offset:3px}
     <kbd>M</kbd><span>音</span>
     <kbd>Esc</kbd><span>一時停止</span>
   </div>
-  <div id="impact" aria-hidden="true"></div>
   <div id="osd"><span id="oRng">RNG ---- M</span><span id="oZoom">MAG  6.0X</span><span id="oHdg">HDG 000°</span></div>
   <div id="osd2"><span id="oState">READY</span><span class="breath"><span>BR</span><span class="bar" id="breathBar"><span id="oBreath"></span></span></span></div>
   <div id="msgs" role="log" aria-label="射撃ログ" aria-live="polite" aria-relevant="additions"></div>
@@ -206,21 +202,22 @@ button:focus-visible{outline:2px solid var(--blaze);outline-offset:3px}
 
 <section id="title" class="overlay">
   <div class="card">
+    <p class="stagetag">BARN</p>
     <h1>Night Scope</h1>
-    <p class="lead">暗視スコープ越しに、夜の牧草地にいる野ネズミを撃つ長距離狙撃ゲーム。</p>
+    <p class="lead">暗視スコープ付きのエアライフルで、夜の納屋に巣くうネズミを撃つ近距離射撃ゲーム。</p>
     <div class="modes" role="radiogroup" aria-label="モード" id="modes">
-      <button class="mode" role="radio" data-mode="sa" aria-checked="true"><span class="mname">スコアアタック</span><span class="mdesc">60秒・弾無制限・ネズミ3倍</span></button>
+      <button class="mode" role="radio" data-mode="sa" aria-checked="true"><span class="mname">スコアアタック</span><span class="mdesc">60秒・弾無制限・頭を撃って仕留める</span></button>
       <button class="mode" role="radio" data-mode="free" aria-checked="false"><span class="mname">フリー</span><span class="mdesc">時間も弾も無制限</span></button>
     </div>
     <p class="mode-note" id="modeNote"></p>
     <div class="rules">
-      <p><strong>体のどこに当たっても仕留められる</strong>。頭を撃ち抜けば得点2倍。着弾の近くにいたネズミは驚いて走り出す。</p>
-      <p>暗闇で光る目が目印。弾は秒速850mで飛び、重力で落下する。遠い相手ほど上を、走っている相手は進行方向の少し先を狙う。息を止めると照準のブレが収まる。</p>
+      <p>ネズミは床だけでなく、<strong>梁や屋根裏、棚、干し草の上</strong>も走り回る。エアライフルは威力が弱く、<strong>仕留められるのは頭に当てたときだけ</strong>。体に当たると逃げてしまうが、床や壁に外しても気づかれない。高い所の相手、走っている相手、続けざまの命中は得点が上がる。</p>
+      <p>弾は秒速280mで、1発撃つごとに0.35秒のクールタイムがある。<strong>スコープは銃身より5cm上にある</strong>ので、近すぎる相手には照準より少し下に当たる（20mでぴったり合う）。</p>
     </div>
     <dl class="controls" id="ctlDesk">
       <dt>マウス</dt><dd>照準を動かす</dd>
       <dt>クリック / Space</dt><dd>撃つ</dd>
-      <dt>ホイール</dt><dd>倍率 3〜32倍</dd>
+      <dt>ホイール</dt><dd>倍率 1.5〜8倍</dd>
       <dt>Shift / 右ボタン</dt><dd>長押しで息を止める</dd>
       <dt>M</dt><dd>音のオンオフ</dd>
       <dt>Esc</dt><dd>一時停止</dd>
@@ -229,15 +226,15 @@ button:focus-visible{outline:2px solid var(--blaze);outline-offset:3px}
       <dt>ドラッグ</dt><dd>照準を動かす</dd>
       <dt>ジャイロ</dt><dd>端末を傾けて照準を動かす（下の設定でオン）</dd>
       <dt>撃つ</dt><dd>射撃</dd>
-      <dt>＋ － / ピンチ</dt><dd>倍率を変える（3〜32倍）</dd>
+      <dt>＋ － / ピンチ</dt><dd>倍率を変える（1.5〜8倍）</dd>
       <dt>息を止める</dt><dd>長押しでブレを抑える</dd>
     </dl>
     <label class="sens">照準の感度<input type="range" id="sens" min="0.4" max="4" step="0.1" value="1.5"><output id="sensVal">1.5</output></label>
     <label class="sens check is-hidden" id="gyroRow"><input type="checkbox" id="gyro"><span>ジャイロ照準　端末を傾けて狙う</span></label>
     <label class="sens is-hidden" id="gsensRow">ジャイロ感度<input type="range" id="gsens" min="0.2" max="4" step="0.1" value="1"><output id="gsensVal">1.0</output></label>
-    <div class="btns"><button class="primary" id="bStart">狙撃を始める</button></div>
+    <div class="btns"><button class="primary" id="bStart">射撃を始める</button></div>
     <p class="best" id="best"></p>
-    <a class="stagelink" href="barn-scope.html">納屋の近距離射撃へ →</a>
+    <a class="stagelink" href="night-scope.html">牧草地の長距離狙撃へ →</a>
   </div>
 </section>
 
@@ -295,55 +292,36 @@ const store = {
 };
 
 // ================= config =================
+// A PCP air rifle: quiet, low-velocity pellets that will not punch through the barn,
+// a side lever instead of a bolt.
 const CFG = {
-  cooldown: 1.0,
-  muzzle: 850,
+  cooldown: 0.35,
+  muzzle: 280,
   gravity: 9.81,
-  zoomMin: 3, zoomMax: 32, zoomStart: 6, baseDeg: 36,
+  sightH: 0.05, zeroRange: 20,   // the scope rides 5cm above the bore, zeroed at 20m
+  zoomMin: 1.5, zoomMax: 8, zoomStart: 2.5, baseDeg: 36,
   gain: 3.8
 };
 const MODES = {
-  // Rank thresholds scaled by 5/3, matching the score change at 200m.
-  // Separate best-score keys preserve old records without mixing scoring rules.
-  sa:   { key:'sa',   name:'スコアアタック', initial:54, maxActive:66, gap:[0.17, 0.27], time:60,
-          note:'制限時間60秒、弾は無制限。牧草地を埋め尽くすネズミを撃ってスコアを競う。',
-          ranks:[14200, 10000, 6300, 3200], bestKey:'ns-best-sa' },
-  free: { key:'free', name:'フリー', initial:16, maxActive:20, gap:[0.8, 1.2], time:0,
+  // Rank thresholds are provisional; tune them after some play.
+  sa:   { key:'sa',   name:'スコアアタック', initial:24, maxActive:30, gap:[0.2, 0.3], time:60,
+          note:'制限時間60秒、弾は無制限。納屋じゅうのネズミを撃ってスコアを競う。',
+          ranks:[14000, 9500, 6000, 3000], bestKey:'nsb-best-sa' },
+  free: { key:'free', name:'フリー', initial:8, maxActive:12, gap:[0.9, 1.3], time:0,
           note:'時間も弾も無制限で、ネズミは出続ける。練習向け。一時停止メニューからいつでも終了できる。',
           ranks:null, bestKey:null }
 };
-let MODE = MODES[store.get('ns-mode', 'sa')] || MODES.sa;
-const T = { x0:-360, z0:-520, x1:360, z1:90, s:2 };
-T.nx = Math.round((T.x1-T.x0)/T.s)+1;
-T.nz = Math.round((T.z1-T.z0)/T.s)+1;
-const CAM = { x:0, z:34, eye:1.15 };
-const FIELD = { zNear:-50, zFar:-335, xMax:250 };
-const xLimit = z => Math.min(FIELD.xMax, (CAM.z - z)*Math.tan(0.87));
+let MODE = MODES[store.get('nsb-mode', 'sa')] || MODES.sa;
 
-// ================= terrain height =================
-function heightRaw(x, z){
-  let h = fbm(x*0.0062+3.1, z*0.0062-7.7, 4)*12;
-  h += fbm(x*0.027+41.0, z*0.027+13.0, 3)*1.7;
-  h += fbm(x*0.11-7.0, z*0.11+3.0, 2)*0.25;
-  const dc2 = (x-CAM.x)*(x-CAM.x) + (z-CAM.z)*(z-CAM.z);
-  h += 11*Math.exp(-dc2/(2*40*40));
-  if (z < -360){ const q = (-360-z)/90; h += q*q*10; }
-  const side = Math.abs(x) - 265;
-  if (side > 0){ const q = side/60; h += q*q*9; }
-  return h;
-}
-const HF = new Float32Array(T.nx*T.nz);
-for (let j=0;j<T.nz;j++){ const z = T.z0 + j*T.s; for (let i=0;i<T.nx;i++){ HF[j*T.nx+i] = heightRaw(T.x0+i*T.s, z); } }
-function H(x, z){
-  let gx = (x-T.x0)/T.s, gz = (z-T.z0)/T.s;
-  if (gx < 0) gx = 0; else if (gx > T.nx-1.001) gx = T.nx-1.001;
-  if (gz < 0) gz = 0; else if (gz > T.nz-1.001) gz = T.nz-1.001;
-  const i = gx|0, j = gz|0, fx = gx-i, fz = gz-j, b = j*T.nx+i;
-  const h00 = HF[b], h10 = HF[b+1], h01 = HF[b+T.nx], h11 = HF[b+T.nx+1];
-  if (fx+fz <= 1) return h00 + fx*(h10-h00) + fz*(h01-h00);
-  return h11 + (1-fx)*(h01-h11) + (1-fz)*(h10-h11);
-}
-const camPos = new THREE.Vector3(CAM.x, H(CAM.x, CAM.z) + CAM.eye, CAM.z);
+// ================= barn layout =================
+// x runs across the barn, z down its length (the shooter stands at the +z end), y is up. Metres.
+const BARN = { hw:9, zBack:4, zFar:-34, eave:5, ridge:8, wall:0.2 };
+const roofY = x => BARN.eave + (BARN.hw - Math.abs(x))*(BARN.ridge - BARN.eave)/BARN.hw;
+const CAM = { x:0.6, z:1.8, eye:1.6 };
+const camPos = new THREE.Vector3(CAM.x, CAM.eye, CAM.z);
+const BEAM_Z = [-6, -14, -22, -30];
+const PLATE_Y = 4.6;
+const LOFT = { x0:-9, x1:-3, z0:-34, z1:-17, y:3.0 };
 
 // ================= renderer =================
 const isCoarse = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
@@ -423,7 +401,37 @@ const postCam = new THREE.OrthographicCamera(-1,1,1,-1,0,1);
 postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2), postMat));
 
 // ================= textures =================
-function makeGroundTex(){
+// Night vision only shows luminance, so textures are greyscale and materials set the brightness.
+function tileNoise(x, y, S, fx, fy, oct){
+  // Blend four offset samples so the pattern wraps at the canvas edges.
+  const u = x/S, v = y/S;
+  const a = fbm(x*fx, y*fy, oct), b = fbm((x-S)*fx, y*fy, oct);
+  const c = fbm(x*fx, (y-S)*fy, oct), d = fbm((x-S)*fx, (y-S)*fy, oct);
+  return lerp(lerp(a, b, u), lerp(c, d, u), v);
+}
+function canvasTex(c, repeat){
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  t.repeat.set(repeat, repeat);
+  return t;
+}
+function makeWoodCanvas(seed, boards){
+  const S = 256, c = document.createElement('canvas'); c.width = c.height = S;
+  const g = c.getContext('2d'), img = g.createImageData(S, S), R = mulberry(seed);
+  const shade = Array.from({ length:Math.max(1, boards) }, () => 0.72 + R()*0.45);
+  for (let y=0;y<S;y++) for (let x=0;x<S;x++){
+    const bi = boards ? Math.floor(x/S*boards) : 0, bx = boards ? x/S*boards - bi : 0.5;
+    const grain = tileNoise(x, y, S, 0.09, 0.011, 3);
+    let v = 150 + grain*95 + Math.sin(x*0.49 + grain*16 + bi*2.1)*13;
+    v *= shade[bi];
+    if (boards && (bx < 0.03 || bx > 0.97)) v *= 0.28; // gaps between boards
+    const i = (y*S+x)*4; img.data[i] = img.data[i+1] = img.data[i+2] = v; img.data[i+3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  return c;
+}
+function makeGroundCanvas(){
   const c = document.createElement('canvas'); c.width = c.height = 256;
   const g = c.getContext('2d');
   const img = g.createImageData(256,256); const r = mulberry(7);
@@ -439,10 +447,22 @@ function makeGroundTex(){
       g.beginPath(); g.moveTo(x+ox, y+oy); g.lineTo(x+ox+Math.cos(a)*L, y+oy+Math.sin(a)*L); g.stroke();
     }
   }
-  const t = new THREE.CanvasTexture(c);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.anisotropy = renderer.capabilities.getMaxAnisotropy();
-  return t;
+  return c;
+}
+function makeHayCanvas(){
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d'), R = mulberry(313);
+  g.fillStyle = '#7a7a7a'; g.fillRect(0, 0, 128, 128);
+  g.lineCap = 'round';
+  for (let i=0;i<1700;i++){
+    const x = R()*128, y = R()*128, a = (R()-0.5)*0.9 + (R() < 0.25 ? Math.PI/2 : 0), L = 4 + R()*14;
+    const v = R() < 0.55 ? 40 + R()*60 : 170 + R()*85;
+    g.strokeStyle = `rgba(${v|0},${v|0},${v|0},${0.35+R()*0.45})`; g.lineWidth = 0.6 + R()*1.1;
+    for (const ox of [-128,0,128]) for (const oy of [-128,0,128]){
+      g.beginPath(); g.moveTo(x+ox, y+oy); g.lineTo(x+ox+Math.cos(a)*L, y+oy+Math.sin(a)*L); g.stroke();
+    }
+  }
+  return c;
 }
 function makeSoftTex(){
   const c = document.createElement('canvas'); c.width = c.height = 64;
@@ -454,451 +474,237 @@ function makeSoftTex(){
 }
 const softTex = makeSoftTex();
 
-function makeMoonTex(){
-  const c=document.createElement('canvas');c.width=c.height=256;
-  const ctx=c.getContext('2d'),img=ctx.createImageData(256,256),R=mulberry(1012);
-  const craters=Array.from({length:32},()=>({x:(R()*2-1)*0.84,y:(R()*2-1)*0.84,r:0.02+R()*0.11}));
-  for(let y=0;y<256;y++) for(let x=0;x<256;x++){
-    const nx=(x-127.5)/125,ny=(y-127.5)/125,r2=nx*nx+ny*ny;
-    if(r2>=1) continue;
-    const nz=Math.sqrt(1-r2),light=Math.max(0,-nx*0.38-ny*0.24+nz*0.89);
-    let albedo=0.78+fbm(nx*5+23,ny*5-6,4)*0.32;
-    for(const crater of craters){
-      const d=Math.hypot(nx-crater.x,ny-crater.y)/crater.r;
-      if(d<1.35) albedo+=Math.exp(-(((d-1)*9)**2))*0.14-Math.max(0,1-d*d)*0.16;
-    }
-    const v=255*albedo*(0.12+light*0.88),i=(y*256+x)*4;
-    img.data[i]=v;img.data[i+1]=v*0.98;img.data[i+2]=v*0.9;img.data[i+3]=Math.min(1,(1-r2)*100)*255;
-  }
-  ctx.putImageData(img,0,0);return new THREE.CanvasTexture(c);
-}
-
 // ================= world =================
-const sceneRand = mulberry(20260916);
-(function buildTerrain(){
-  const N = T.nx*T.nz;
-  const pos = new Float32Array(N*3), col = new Float32Array(N*3), uv = new Float32Array(N*2);
-  for (let j=0;j<T.nz;j++){
-    const z = T.z0 + j*T.s;
-    for (let i=0;i<T.nx;i++){
-      const x = T.x0 + i*T.s, k = j*T.nx+i, h = HF[k];
-      pos[k*3] = x; pos[k*3+1] = h; pos[k*3+2] = z;
-      uv[k*2] = x/4; uv[k*2+1] = z/4;
-      const n1 = fbm(x*0.018+20, z*0.018-5, 3), n2 = fbm(x*0.075-30, z*0.075+12, 2), n3 = vnoise(x*0.4, z*0.4);
-      let r = 0.40, g = 0.45, b = 0.34;
-      const dirt = smooth(0.12, 0.42, n1);
-      r = lerp(r, 0.55, dirt); g = lerp(g, 0.50, dirt); b = lerp(b, 0.41, dirt);
-      const dark = smooth(0.08, 0.45, n2);
-      r = lerp(r, 0.25, dark*0.8); g = lerp(g, 0.30, dark*0.8); b = lerp(b, 0.21, dark*0.8);
-      const br = 0.88 + 0.18*n3;
-      col[k*3] = r*br; col[k*3+1] = g*br; col[k*3+2] = b*br;
-    }
-  }
-  const idx = new Uint32Array((T.nx-1)*(T.nz-1)*6); let p = 0;
-  for (let j=0;j<T.nz-1;j++) for (let i=0;i<T.nx-1;i++){
-    const v00 = j*T.nx+i, v10 = v00+1, v01 = v00+T.nx, v11 = v01+1;
-    idx[p++] = v00; idx[p++] = v01; idx[p++] = v10;
-    idx[p++] = v10; idx[p++] = v01; idx[p++] = v11;
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
-  geo.setAttribute('color', new THREE.BufferAttribute(col,3));
-  geo.setAttribute('uv', new THREE.BufferAttribute(uv,2));
-  geo.setIndex(new THREE.BufferAttribute(idx,1));
-  geo.computeVertexNormals();
-  const mat = new THREE.MeshPhongMaterial({ vertexColors:true, map:makeGroundTex(), shininess:2, specular:0x000000 });
-  scene.add(new THREE.Mesh(geo, mat));
-})();
-
+// Everything a pellet can strike is an axis-aligned box in `solids` (plus the analytic roof),
+// and everything a rat can walk on is a flat rectangle in `surfaces`.
+const solids = [], surfaces = [];
 const dummy = new THREE.Object3D();
-const bushes = [];
+const sceneRand = mulberry(20260917);
 
-// ================= procedural vegetation =================
-// One clock drives a spatial wind field on the GPU. Roots have zero bend;
-// stems share the slow gusts while individual leaf tips add a faster flutter.
-const vegetationTime = { value:0 };
-const motionQuery = matchMedia('(prefers-reduced-motion: reduce)');
-const vegetationMotion = { value:motionQuery.matches ? 0 : 1 };
-const setVegetationMotion = () => { vegetationMotion.value = motionQuery.matches ? 0 : 1; };
-if (motionQuery.addEventListener) motionQuery.addEventListener('change', setVegetationMotion);
-const vegetationTiles = [];
-const vegetationFrustum = new THREE.Frustum();
-const vegetationProjection = new THREE.Matrix4();
-
-function windMaterial(options){
-  const mat = new THREE.MeshLambertMaterial({ vertexColors:true, ...options });
-  mat.onBeforeCompile = shader => {
-    shader.uniforms.uVegetationTime = vegetationTime;
-    shader.uniforms.uVegetationMotion = vegetationMotion;
-    shader.vertexShader = `
-      uniform float uVegetationTime;
-      uniform float uVegetationMotion;
-      attribute vec3 aWind;
-      vec3 vegetationBend;
-      vec3 vegetationDirection;
-    ` + shader.vertexShader;
-    shader.vertexShader = shader.vertexShader.replace('#include <beginnormal_vertex>', `
-      #include <beginnormal_vertex>
-      vec3 root = (modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
-      float travel = dot(root.xz, vec2(0.055, 0.032)) - uVegetationTime * 1.15;
-      float gust = 0.55 + 0.3 * sin(travel) + 0.15 * sin(travel * 0.43 - uVegetationTime * 0.37);
-      float ripple = sin(uVegetationTime * 2.4 + root.x * 0.19 + root.z * 0.13);
-      vec3 windDir = normalize(vec3(0.92, 0.0, 0.38));
-      vegetationDirection = vec3(dot(normalize(instanceMatrix[0].xyz), windDir),
-                                0.0, dot(normalize(instanceMatrix[2].xyz), windDir));
-      float flutter = sin(uVegetationTime * 5.7 + aWind.z + travel * 1.8);
-      vegetationBend = vegetationDirection * (aWind.x * (gust + ripple * 0.16));
-      vegetationBend += vec3(-vegetationDirection.z, 0.28, vegetationDirection.x) * aWind.y * flutter * (0.35 + gust);
-      vegetationBend *= uVegetationMotion;
-      // Tilt the lighting normal along with the bent blade/crown.
-      objectNormal.y -= dot(objectNormal.xz, vegetationBend.xz) * 1.7 / max(position.y, 0.12);
-      objectNormal = normalize(objectNormal);
-    `);
-    shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `
-      #include <begin_vertex>
-      transformed += vegetationBend;
-    `);
-  };
-  mat.customProgramCacheKey = () => 'vegetation-wind-v1';
-  return mat;
+function uvBox(geo, sx, sy, sz){
+  // BoxGeometry faces run +x, -x, +y, -y, +z, -z with four vertices each; scale UVs to metres.
+  const uv = geo.attributes.uv, dims = [[sz,sy],[sz,sy],[sx,sz],[sx,sz],[sx,sy],[sx,sy]];
+  for (let f=0; f<6; f++) for (let v=0; v<4; v++){ const i = f*4+v; uv.setXY(i, uv.getX(i)*dims[f][0], uv.getY(i)*dims[f][1]); }
+}
+function box(x0, y0, z0, x1, y1, z1, mat, solid=true){
+  const sx = x1-x0, sy = y1-y0, sz = z1-z0;
+  const g = new THREE.BoxGeometry(sx, sy, sz); uvBox(g, sx, sy, sz);
+  const m = new THREE.Mesh(g, mat); m.position.set((x0+x1)/2, (y0+y1)/2, (z0+z1)/2);
+  scene.add(m);
+  if (solid) solids.push({ x0, y0, z0, x1, y1, z1 });
+  return m;
+}
+// A visual-only box rotated about z, for sloped or leaning members.
+function slab(cx, cy, cz, sx, sy, sz, rz, mat){
+  const g = new THREE.BoxGeometry(sx, sy, sz); uvBox(g, sx, sy, sz);
+  const m = new THREE.Mesh(g, mat); m.position.set(cx, cy, cz); m.rotation.z = rz; scene.add(m);
+  return m;
+}
+// drop: a rat shot here tumbles off to whatever is below.
+function surface(name, y, x0, x1, z0, z1, weight, drop){
+  surfaces.push({ name, y, x0, x1, z0, z1, weight, drop:!!drop, blockers:[] });
 }
 
-function plantData(){ return { p:[], c:[], w:[], uv:[], i:[] }; }
-function plantVertex(data, p, color, bend, flutter=0, phase=0, u=0, v=0){
-  const i = data.p.length/3;
-  data.p.push(p.x, p.y, p.z); data.c.push(...color);
-  data.w.push(bend, flutter, phase); data.uv.push(u,v);
-  return i;
-}
-function plantGeometry(data){
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(data.p,3));
-  g.setAttribute('color', new THREE.Float32BufferAttribute(data.c,3));
-  g.setAttribute('aWind', new THREE.Float32BufferAttribute(data.w,3));
-  g.setAttribute('uv', new THREE.Float32BufferAttribute(data.uv,2));
-  g.setIndex(data.i); g.computeVertexNormals(); g.computeBoundingSphere();
-  return g;
-}
+(function buildBarn(){
+  const B = BARN, t = B.wall, R = sceneRand;
+  const woodC = makeWoodCanvas(11, 4), timberC = makeWoodCanvas(23, 0), hayC = makeHayCanvas(), groundC = makeGroundCanvas();
+  // Per-pixel lighting: the IR spot is narrower than most walls, so per-vertex Lambert would leave them black.
+  const lam = (map, color) => new THREE.MeshPhongMaterial({ map, color, specular:0x000000, shininess:2 });
+  const plankMat = lam(canvasTex(woodC, 1/1.6), 0x8a8276);
+  const roofMat = lam(canvasTex(woodC, 1/1.6), 0x5a554e);
+  const doorMat = lam(canvasTex(woodC, 1/1.1), 0x6e685f);
+  const timberTex = canvasTex(timberC, 1/2.2); timberTex.rotation = Math.PI/2;
+  const timberMat = lam(timberTex, 0x7c7468);
+  const floorMat = lam(canvasTex(groundC, 1/2.5), 0x77736a);
+  const hayMats = [lam(canvasTex(hayC, 1/0.9), 0xc2bba4), lam(canvasTex(hayC, 1/0.8), 0xaea78f), lam(canvasTex(hayC, 1/1.0), 0xb8b198)];
+  const metalMat = new THREE.MeshPhongMaterial({ color:0x6d7172, specular:0x222222, shininess:20 });
+  const sackMat = lam(canvasTex(groundC, 1/0.6), 0xa39c8c);
+  const darkMat = lam(null, 0x3a3733);
 
-function makeGrass(seed){
-  const R = mulberry(seed), data = plantData();
-  for (let b=0;b<9;b++){
-    const angle = R()*Math.PI*2, height = 0.55+R()*0.65, lean = 0.16+R()*0.55;
-    const width = 0.028+R()*0.025, radius = R()*0.24;
-    const dx = Math.sin(angle), dz = Math.cos(angle), dry = R()<0.18;
-    const base = data.p.length/3, phase = R()*Math.PI*2;
-    for (let s=0;s<=4;s++){
-      const t = s/4, curve = lean*t*t;
-      const halfWidth = width*(1-t)*(0.65+Math.sin(t*Math.PI)*0.35);
-      const light = 0.42 + t*0.58;
-      const color = dry ? [0.56*light,0.49*light,0.29*light] : [0.29*light,0.44*light,0.20*light];
-      for (const side of [-1,1]){
-        const p = new THREE.Vector3(dx*(radius+curve)+dz*halfWidth*side,
-          height*(t-0.14*t*t*t), dz*(radius+curve)-dx*halfWidth*side);
-        plantVertex(data,p,color,t*t*0.28,t*t*t*0.022,phase);
-      }
-      if (s<4){ const k=base+s*2; data.i.push(k,k+1,k+2,k+1,k+3,k+2); }
+  // shell
+  box(-B.hw-1, -0.3, B.zFar-1, B.hw+1, 0, B.zBack+1, floorMat);
+  box(-B.hw-t, 0, B.zFar-t, -B.hw, B.eave, B.zBack+t, plankMat);
+  box(B.hw, 0, B.zFar-t, B.hw+t, B.eave, B.zBack+t, plankMat);
+  box(-B.hw, 0, B.zFar-t, B.hw, B.eave, B.zFar, plankMat);
+  box(-B.hw, 0, B.zBack, B.hw, B.eave, B.zBack+t, plankMat);
+  for (const z of [B.zFar-t, B.zBack]){
+    const sh = new THREE.Shape();
+    sh.moveTo(-B.hw-0.3, B.eave); sh.lineTo(B.hw+0.3, B.eave); sh.lineTo(0, B.ridge+0.15); sh.closePath();
+    const gm = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth:t, bevelEnabled:false }), plankMat);
+    gm.position.z = z; scene.add(gm);
+    solids.push({ x0:-B.hw, y0:B.eave, z0:z, x1:B.hw, y1:B.ridge, z1:z+t });
+  }
+  // roof (collision is the analytic roofY plane)
+  const slope = Math.atan2(B.ridge-B.eave, B.hw), rl = Math.hypot(B.hw, B.ridge-B.eave) + 0.8, rz = B.zBack-B.zFar+1.2;
+  for (const s of [1, -1]){
+    slab(s*B.hw/2, roofY(B.hw/2) + 0.06/Math.cos(slope), (B.zBack+B.zFar)/2, rl, 0.12, rz, -s*slope, roofMat);
+    for (let z=B.zFar+1; z<B.zBack; z+=2){
+      slab(s*B.hw/2, roofY(B.hw/2) - 0.09/Math.cos(slope), z, rl-0.9, 0.18, 0.1, -s*slope, timberMat); // rafters
+    }
+    slab(s*B.hw*0.55, roofY(B.hw*0.55) - 0.3, (B.zBack+B.zFar)/2, 0.14, 0.2, rz, -s*slope, timberMat); // purlin
+  }
+  box(-0.1, roofY(0)-0.35, B.zFar, 0.1, roofY(0)-0.1, B.zBack, timberMat, false); // ridge beam
+
+  // frame: posts, tie beams with king posts, wall plates
+  for (const z of BEAM_Z){
+    for (const px of [-3, 4.5]) box(px-0.12, 0, z-0.12, px+0.12, PLATE_Y-0.22, z+0.12, timberMat);
+    box(-B.hw, PLATE_Y-0.22, z-0.1, B.hw, PLATE_Y, z+0.1, timberMat);
+    box(-0.08, PLATE_Y, z-0.08, 0.08, roofY(0.08)-0.3, z+0.08, timberMat);
+    surface('beam', PLATE_Y, -8.72, 8.72, z-0.02, z+0.02, 0.6, true);
+  }
+  for (const s of [1, -1]){
+    const xa = s > 0 ? B.hw-0.3 : -B.hw, xb = s > 0 ? B.hw : -B.hw+0.3;
+    box(xa, PLATE_Y-0.22, B.zFar, xb, PLATE_Y, B.zBack, timberMat);
+    surface('plate', PLATE_Y, s > 0 ? 8.72 : -8.78, s > 0 ? 8.78 : -8.72, B.zFar+0.3, -2.5, 0.8, true);
+  }
+
+  // hayloft
+  box(LOFT.x0, LOFT.y-0.2, LOFT.z0, LOFT.x1, LOFT.y, LOFT.z1, plankMat);
+  box(LOFT.x1-0.12, LOFT.y-0.45, LOFT.z0, LOFT.x1+0.12, LOFT.y-0.2, LOFT.z1, timberMat);
+  box(LOFT.x1-0.1, 0, LOFT.z1-0.1, LOFT.x1+0.1, LOFT.y-0.45, LOFT.z1+0.1, timberMat);
+  for (let z=LOFT.z0+1.2; z<LOFT.z1; z+=1.4) box(LOFT.x0, LOFT.y-0.42, z-0.06, LOFT.x1-0.12, LOFT.y-0.2, z+0.06, timberMat, false);
+
+  // Bale stacks share one collision box each; individual bales are only visual.
+  function baleStack(x0, z0, nx, nz, layers, y0, alongX){
+    const sx = alongX ? 1.1 : 0.5, sz = alongX ? 0.5 : 1.1, bh = 0.45;
+    for (let l=0;l<layers;l++) for (let i=0;i<nx;i++) for (let k=0;k<nz;k++){
+      const x = x0 + i*sx, z = z0 + k*sz, y = y0 + l*bh, j = (R()-0.5)*0.03;
+      box(x+0.015+j, y, z+0.015, x+sx-0.015+j, y+bh-0.005, z+sz-0.015, hayMats[(R()*3)|0], false);
+    }
+    const s = { x0, z0, x1:x0+nx*sx, z1:z0+nz*sz, y:y0+layers*bh };
+    solids.push({ x0:s.x0, y0, z0:s.z0, x1:s.x1, y1:s.y, z1:s.z1 });
+    return s;
+  }
+  const lb = baleStack(-9, -33.8, 2, 12, 2, LOFT.y, false);
+  surface('loft-bales', lb.y, lb.x0+0.12, lb.x1-0.12, lb.z0+0.15, lb.z1-0.15, 0.5);
+  surface('loft', LOFT.y, -7.82, LOFT.x1-0.15, LOFT.z0+0.2, LOFT.z1-0.15, 2.0);
+  const sa = baleStack(2.2, -11.5, 3, 2, 2, 0, true);
+  surface('bales', sa.y, sa.x0+0.1, sa.x1-0.1, sa.z0+0.1, sa.z1-0.1, 0.5);
+  const sb = baleStack(-2.2, -25.5, 2, 3, 3, 0, true);
+  surface('bales', sb.y, sb.x0+0.1, sb.x1-0.1, sb.z0+0.1, sb.z1-0.1, 0.5);
+  const sc = baleStack(5.8, -19.5, 1, 1, 1, 0, true);
+  surface('bale', sc.y, sc.x0+0.1, sc.x1-0.1, sc.z0+0.1, sc.z1-0.1, 0.2);
+
+  // ladder up to the loft (visual)
+  const la = Math.atan2(1.1, 3.5), ll = Math.hypot(1.1, 3.5);
+  for (const z of [-19.35, -19.85]) slab(-2.45, 1.75, z, 0.06, ll, 0.05, la, timberMat);
+  for (let k=1;k<11;k++){ const f = k/11; box(-1.9 - 1.1*f - 0.03, 3.5*f - 0.02, -19.85, -1.9 - 1.1*f + 0.03, 3.5*f + 0.02, -19.35, timberMat, false); }
+
+  // shelves on the right wall
+  for (const z of [-20, -16, -12]) box(8.0, 0, z-0.04, 8.95, 2.6, z+0.04, timberMat);
+  const cans = new THREE.CylinderGeometry(1, 1, 1, 12);
+  for (const h of [1.0, 2.0]){
+    box(8.0, h-0.035, -20.04, 8.95, h, -11.96, plankMat);
+    surface('shelf', h, 8.12, 8.8, -19.9, -12.1, 0.4, true);
+    for (let k=0;k<4;k++){
+      const z = -19.4 + R()*7, r = 0.06 + R()*0.05, ch = 0.12 + R()*0.14;
+      if (Math.abs(z+16) < 0.3) continue;
+      const m = new THREE.Mesh(cans, R() < 0.5 ? metalMat : darkMat); m.scale.set(r, ch, r); m.position.set(8.55, h+ch/2, z); scene.add(m);
+      solids.push({ x0:8.55-r, y0:h, z0:z-r, x1:8.55+r, y1:h+ch, z1:z+r });
     }
   }
-  return plantGeometry(data);
-}
 
-function addStem(data, start, end, r0, r1, stiffness, R){
-  const axis = end.clone().sub(start), length = axis.length(); axis.normalize();
-  const side = new THREE.Vector3().crossVectors(axis, Math.abs(axis.y)>0.94 ? new THREE.Vector3(1,0,0) : new THREE.Vector3(0,1,0)).normalize();
-  const other = new THREE.Vector3().crossVectors(axis,side).normalize();
-  const base = data.p.length/3, sides = 7, rings = 4, phase = R()*6.28;
-  for (let j=0;j<=rings;j++){
-    const t=j/rings, radius=lerp(r0,r1,t);
-    const center=start.clone().lerp(end,t).addScaledVector(side,Math.sin(t*Math.PI)*length*0.045);
-    for (let k=0;k<=sides;k++){
-      const a=k/sides*Math.PI*2, ridge=1+Math.sin(a*3+phase)*0.1;
-      const p=center.clone().addScaledVector(side,Math.cos(a)*radius*ridge).addScaledVector(other,Math.sin(a)*radius*ridge);
-      const shade=0.75+0.25*Math.sin(a+phase);
-      plantVertex(data,p,[0.27*shade,0.22*shade,0.15*shade],Math.max(0,p.y)**2*stiffness,0,0,k/sides,t*length*18);
-      if(j<rings && k<sides){const i=base+j*(sides+1)+k;data.i.push(i,i+sides+1,i+1,i+1,i+sides+1,i+sides+2);}
-    }
+  // stall partitions
+  for (const z of [-23, -27.5, -32]){
+    box(5.2, 0, z-0.03, 9, 1.3, z+0.03, plankMat);
+    box(5.1, 0, z-0.07, 5.3, 1.45, z+0.07, timberMat);
+    surface('rail', 1.3, 5.45, 8.8, z-0.005, z+0.005, 0.2, true);
   }
-}
 
-function addLeaf(data, base, direction, length, width, shade, stiffness, R){
-  const d=direction.clone().normalize();
-  const side=new THREE.Vector3().crossVectors(d,new THREE.Vector3(0,1,0)).normalize();
-  side.applyAxisAngle(d,(R()-0.5)*1.8);
-  const normal=new THREE.Vector3().crossVectors(side,d).normalize();
-  const mid=base.clone().addScaledVector(d,length*0.45);
-  const verts=[base,mid.clone().addScaledVector(side,width),mid.clone().addScaledVector(normal,length*0.11),mid.clone().addScaledVector(side,-width),base.clone().addScaledVector(d,length)];
-  const offset=data.p.length/3, phase=R()*6.28;
-  verts.forEach((p,i)=>{
-    const light=shade*(i===2 ? 1.17 : i===0 ? 0.68 : 1);
-    plantVertex(data,p,[0.16*light,0.26*light,0.105*light],Math.max(0,p.y)**2*stiffness,i===0 ? 0 : length*0.13,phase);
-  });
-  data.i.push(offset,offset+1,offset+2,offset,offset+2,offset+3,offset+1,offset+4,offset+2,offset+2,offset+4,offset+3);
-}
+  // workbench with a vise
+  box(-8.95, 0.85, -9, -7.9, 0.9, -5.5, plankMat);
+  for (const [x, z] of [[-8.85,-8.9],[-8.0,-8.9],[-8.85,-5.6],[-8.0,-5.6]]) box(x-0.04, 0, z-0.04, x+0.04, 0.85, z+0.04, timberMat);
+  box(-8.2, 0.9, -8.5, -7.95, 1.05, -8.25, metalMat);
+  surface('bench', 0.9, -8.8, -8.05, -8.85, -5.65, 0.3);
 
-function leafCluster(data, center, radius, count, stiffness, R){
-  for(let i=0;i<count;i++){
-    const a=R()*6.28, y=R()*2-1, r=radius*Math.cbrt(R()), h=Math.sqrt(1-y*y);
-    const p=center.clone().add(new THREE.Vector3(Math.cos(a)*h*r,y*r*0.65,Math.sin(a)*h*r));
-    const dir=new THREE.Vector3(Math.cos(a),0.15+R()*0.8,Math.sin(a));
-    addLeaf(data,p,dir,0.03+R()*0.03,0.012+R()*0.011,0.65+R()*0.55,stiffness,R);
+  // barrels, sacks, crates
+  const barrelGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.9, 16);
+  for (const [x, z] of [[2.5,-17],[3.15,-17.45],[-6.5,-12.5]]){
+    const m = new THREE.Mesh(barrelGeo, metalMat); m.position.set(x, 0.45, z); scene.add(m);
+    solids.push({ x0:x-0.3, y0:0, z0:z-0.3, x1:x+0.3, y1:0.9, z1:z+0.3 });
+    surface('barrel', 0.9, x-0.12, x+0.12, z-0.12, z+0.12, 0.12);
   }
-}
+  const sackGeo = new THREE.SphereGeometry(1, 12, 8);
+  for (const [x, y, z, ry] of [[-1.5,0.2,-8.5,0.2],[-0.8,0.2,-8.3,-0.3],[-1.2,0.2,-9.2,1.4],[-1.15,0.52,-8.6,0.5]]){
+    const m = new THREE.Mesh(sackGeo, sackMat); m.scale.set(0.3, 0.2, 0.45); m.position.set(x, y, z); m.rotation.y = ry; scene.add(m);
+    solids.push({ x0:x-0.33, y0:y-0.2, z0:z-0.33, x1:x+0.33, y1:y+0.2, z1:z+0.33 });
+  }
+  for (const [x0, y0, z0] of [[2.4,0,-33.7],[3.02,0,-33.7],[2.7,0.6,-33.7]]){
+    box(x0, y0, z0, x0+0.6, y0+0.6, z0+0.6, plankMat);
+  }
+  surface('crate', 1.2, 2.82, 3.18, -33.55, -33.25, 0.12);
 
-function makeTree(seed, pine=false, shrub=false){
-  const R=mulberry(seed), wood=plantData(), leaves=plantData(), stiffness=shrub ? 0.055 : 0.024;
-  const leanX=(R()-0.5)*0.13, leanZ=(R()-0.5)*0.13;
-  const trunkAt=t=>new THREE.Vector3(leanX*t*t+Math.sin(t*5)*0.012,t,leanZ*t*t);
-  const top=shrub ? 0.68 : 1;
-  for(let i=0;i<8;i++) addStem(wood,trunkAt(i/8*top),trunkAt((i+1)/8*top),lerp(0.029,0.002,i/8),lerp(0.029,0.002,(i+1)/8),stiffness,R);
-  if(pine){
-    for(let level=0;level<9;level++){
-      const y=0.19+level*0.082, reach=0.29*Math.pow(1-y,0.7);
-      for(let b=0;b<5;b++){
-        const a=b/5*6.28+level*2.4+(R()-0.5)*0.4, root=trunkAt(y);
-        const end=root.clone().add(new THREE.Vector3(Math.cos(a)*reach*(0.8+R()*0.35),-0.02+R()*0.055,Math.sin(a)*reach));
-        addStem(wood,root,end,0.007*(1-y),0.001,stiffness,R);
-        for(let j=1;j<=6;j++){
-          const p=root.clone().lerp(end,j/6); p.y+=0.018;
-          for(let k=0;k<(isCoarse ? 9 : 13);k++){
-            const az=a+(R()-0.5)*2.8, dir=new THREE.Vector3(Math.cos(az),0.15+R()*0.8,Math.sin(az));
-            const base=p.clone().add(new THREE.Vector3((R()-0.5)*0.025,(R()-0.5)*0.018,(R()-0.5)*0.025));
-            addLeaf(leaves,base,dir,0.025+R()*0.033,0.0035+R()*0.003,0.62+R()*0.4,stiffness,R);
-          }
-        }
-      }
-    }
-    leafCluster(leaves,trunkAt(0.96),0.025,35,stiffness,R);
-  } else {
-    for(let b=0;b<(shrub ? 7 : 11);b++){
-      const y=(shrub ? 0.08 : 0.32)+b*(shrub ? 0.067 : 0.049), a=b*2.399+R()*0.5;
-      const root=trunkAt(y), reach=(0.19+R()*0.12)*(1-b*0.033);
-      const end=root.clone().add(new THREE.Vector3(Math.cos(a)*reach,0.12+R()*0.12,Math.sin(a)*reach));
-      addStem(wood,root,end,0.012*(1-b*0.047),0.0025,stiffness,R);
-      for(let twig=0;twig<(shrub ? 3 : 4);twig++){
-        const start=root.clone().lerp(end,0.4+twig*0.18), az=a+(twig%2 ? -1 : 1)*(0.5+R()*0.65);
-        const tip=start.clone().add(new THREE.Vector3(Math.cos(az)*(0.055+R()*0.075),0.06+R()*0.1,Math.sin(az)*(0.055+R()*0.075)));
-        addStem(wood,start,tip,0.0025,0.0005,stiffness,R);
-        leafCluster(leaves,tip,0.055+R()*0.035,shrub ? (isCoarse ? 16 : 24) : (isCoarse ? 24 : 38),stiffness,R);
-      }
-      leafCluster(leaves,end,0.065,isCoarse ? 20 : 30,stiffness,R);
-    }
-    leafCluster(leaves,trunkAt(top),0.08,50,stiffness,R);
+  // far wall: the big double door
+  box(-2.1, 0, B.zFar, 2.1, 3.7, B.zFar+0.06, doorMat, false);
+  box(-2.1, 3.7, B.zFar, 2.1, 3.9, B.zFar+0.1, timberMat, false);
+  for (const s of [1, -1]){
+    const da = Math.atan2(3.4, 1.9);
+    slab(s*1.05, 1.85, B.zFar+0.09, 0.14, Math.hypot(1.9, 3.4), 0.05, s*da, timberMat);
   }
-  return {wood:plantGeometry(wood),leaves:plantGeometry(leaves)};
-}
 
-function makeBarkTex(){
-  const canvas=document.createElement('canvas'); canvas.width=128; canvas.height=256;
-  const ctx=canvas.getContext('2d'), image=ctx.createImageData(128,256);
-  for(let y=0;y<256;y++) for(let x=0;x<128;x++){
-    const groove=Math.pow(0.5+0.5*Math.sin(x*0.83+Math.sin(y*0.035+x*0.1)*1.8),5);
-    const v=145+fbm(x*0.12,y*0.04,3)*65-groove*70;
-    const i=(y*128+x)*4; image.data[i]=v;image.data[i+1]=v;image.data[i+2]=v;image.data[i+3]=255;
+  // moonlit windows
+  const glass = new THREE.MeshBasicMaterial({ color:0x252c33 });
+  for (const [s, z] of [[1,-8],[1,-17],[1,-26],[-1,-9]]){
+    const w = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.8), glass);
+    w.position.set(s*(B.hw-0.01), 3.2, z); w.rotation.y = -s*Math.PI/2; scene.add(w);
+    box(s*(B.hw-0.06)-0.04, 3.17, z-0.45, s*(B.hw-0.06)+0.04, 3.23, z+0.45, timberMat, false);
+    box(s*(B.hw-0.06)-0.04, 2.8, z-0.03, s*(B.hw-0.06)+0.04, 3.6, z+0.03, timberMat, false);
   }
-  ctx.putImageData(image,0,0);
-  const tex=new THREE.CanvasTexture(canvas); tex.wrapS=tex.wrapT=THREE.RepeatWrapping;
-  tex.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy()); return tex;
-}
 
-function addPlantInstances(geometry, material, placements, name, tiled=false){
-  if(!placements.length) return;
-  const mesh=new THREE.InstancedMesh(geometry,material,placements.length);
-  mesh.name='vegetation-'+name; mesh.frustumCulled=false;
-  const color=new THREE.Color(), bounds=new THREE.Box3();
-  let maxScale=0;
-  placements.forEach((p,i)=>{
-    dummy.position.set(p.x,p.y,p.z);dummy.rotation.set(0,p.angle,0);dummy.scale.set(p.w,p.h,p.w);dummy.updateMatrix();
-    mesh.setMatrixAt(i,dummy.matrix);color.setRGB(p.tint,p.tint,p.tint);mesh.setColorAt(i,color);
-    bounds.expandByPoint(dummy.position);
-    maxScale=Math.max(maxScale,p.w,p.h);
-  });
-  scene.add(mesh);
-  if(tiled){
-    // Explicit world bounds include plant size and the maximum wind excursion.
-    const extent=geometry.boundingSphere.radius+geometry.boundingSphere.center.length()+0.35;
-    bounds.expandByScalar(extent*maxScale);vegetationTiles.push({mesh,sphere:bounds.getBoundingSphere(new THREE.Sphere())});
-  }
-}
+  // ropes and a lantern hanging from the tie beams
+  const rope = [];
+  for (const [x, z, len] of [[-5.5,-6,1.6],[2.0,-14,2.4],[6.5,-22,1.2]]) rope.push(x, PLATE_Y-0.22, z, x, PLATE_Y-0.22-len, z);
+  const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.Float32BufferAttribute(rope, 3));
+  scene.add(new THREE.LineSegments(rg, new THREE.LineBasicMaterial({ color:0x55524c })));
+  box(1.9, PLATE_Y-2.85, -14.1, 2.1, PLATE_Y-2.6, -13.9, darkMat, false);
 
-function addWoodyTiles(model, barkMaterial, leafMaterial, placements, name){
-  const tiles=new Map();
-  for(const p of placements){
-    const key=`${Math.floor(p.x/85)},${Math.floor(p.z/85)}`;
-    if(!tiles.has(key)) tiles.set(key,[]);
-    tiles.get(key).push(p);
-  }
-  let i=0;
-  for(const tile of tiles.values()){
-    addPlantInstances(model.wood,barkMaterial,tile,`${name}-${i}-wood`,true);
-    addPlantInstances(model.leaves,leafMaterial,tile,`${name}-${i}-leaves`,true);i++;
-  }
-}
-
-(function buildVegetation(){
-  // Separate seeds keep scenery/gameplay placement stable as plant detail changes.
-  const R=mulberry(90317), grassMaterial=windMaterial({side:THREE.DoubleSide});
-  const grassGeos=[makeGrass(41),makeGrass(72),makeGrass(93)], tiles=new Map();
-  const count=isCoarse ? 15000 : 26000;
-  for(let i=0;i<count;i++){
-    const x=(R()*2-1)*310, z=24-R()*430;
-    if(Math.hypot(x-CAM.x,z-CAM.z)<27) continue;
-    const patch=fbm(x*0.047,z*0.047,2);
-    if(R()>0.65+patch*0.6) continue;
-    const edge=smooth(125,220,Math.abs(x)), h=0.12+Math.pow(R(),2)*(0.3+edge*0.32);
-    const key=`${Math.floor(x/36)},${Math.floor(z/36)}`;
-    if(!tiles.has(key)) tiles.set(key,[]);
-    tiles.get(key).push({x,y:H(x,z)-0.015,z,w:0.35+R()*0.45,h,angle:R()*6.28,tint:0.85+R()*0.35});
-  }
-  let tileIndex=0;
-  for(const placements of tiles.values()){
-    addPlantInstances(grassGeos[tileIndex%3],grassMaterial,placements,`grass-${tileIndex}`,true); tileIndex++;
-  }
-  const barkMaterial=windMaterial({map:makeBarkTex()});
-  const leafMaterial=windMaterial({side:THREE.DoubleSide});
-  const treeModels=[makeTree(116),makeTree(219),makeTree(321),makeTree(455,true)];
-  const treePlacements=treeModels.map(()=>[]);
-  for(let i=0,attempt=0;i<90 && attempt<5000;attempt++){
-    const x=(R()*2-1)*350,z=60-R()*560;
-    if(!(Math.abs(x)>175 || z<-300) && R()>0.08) continue;
-    if(Math.hypot(x-CAM.x,z-CAM.z)<45) continue;
-    const h=7+R()*9,kind=i%treeModels.length;
-    treePlacements[kind].push({x,y:H(x,z)-0.12,z,w:h*(0.8+R()*0.35),h,angle:R()*6.28,tint:0.8+R()*0.35});
-    bushes.push({x,z,r:h*0.27});i++;
-  }
-  treeModels.forEach((model,i)=>{
-    addWoodyTiles(model,barkMaterial,leafMaterial,treePlacements[i],`tree-${i}`);
-  });
-  const shrub=makeTree(618,false,true), placements=[];
-  for(let i=0;i<150;i++){
-    const x=(R()*2-1)*320,z=10-R()*400;
-    if(Math.hypot(x-CAM.x,z-CAM.z)<25){i--;continue;}
-    const s=0.5+Math.pow(R(),1.8)*1.7;
-    placements.push({x,y:H(x,z)-0.04,z,w:s*2.1,h:s*1.1,angle:R()*6.28,tint:0.75+R()*0.3});
-    bushes.push({x,z,r:s*1.2});
-  }
-  addWoodyTiles(shrub,barkMaterial,leafMaterial,placements,'shrub');
-})();
-
-function updateVegetation(){
-  vegetationTime.value=simTime;
-  camera.updateMatrixWorld();
-  vegetationProjection.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);
-  vegetationFrustum.setFromProjectionMatrix(vegetationProjection);
-  for(const tile of vegetationTiles) tile.mesh.visible=vegetationFrustum.intersectsSphere(tile.sphere);
-}
-
-(function buildScenery(){
-  const R = sceneRand;
+  // loose straw on the floor
+  const STRAW = isCoarse ? 1400 : 2400;
+  const straw = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color:0xb5ae96 }), STRAW);
   const c = new THREE.Color();
-
-  // rocks
-  const ROCK = 110;
-  const rock = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1, 0), new THREE.MeshLambertMaterial({ color:0xffffff }), ROCK);
-  for (let i=0;i<ROCK;i++){
-    const x = (R()*2-1)*300, z = 0 - R()*380, s = 0.15 + Math.pow(R(),3)*0.9;
-    dummy.position.set(x, H(x,z)+s*0.15, z); dummy.rotation.set(R()*3, R()*3, R()*3);
-    dummy.scale.set(s*(1+R()*0.6), s*(0.5+R()*0.4), s); dummy.updateMatrix();
-    rock.setMatrixAt(i, dummy.matrix);
-    const v = 0.45 + R()*0.2; c.setRGB(v, v, v*0.95); rock.setColorAt(i, c);
+  for (let i=0;i<STRAW;i++){
+    let x = (R()*2-1)*8.8, z = B.zFar + 0.3 + R()*(B.zBack - B.zFar - 1);
+    if (R() < 0.45){ const st = [sa, sb, sc][i%3]; x = lerp(st.x0-0.8, st.x1+0.8, R()); z = lerp(st.z0-0.8, st.z1+0.8, R()); }
+    dummy.position.set(x, 0.004, z); dummy.rotation.set(0, R()*Math.PI, (R()-0.5)*0.2);
+    dummy.scale.set(0.12 + R()*0.28, 0.006, 0.012); dummy.updateMatrix();
+    straw.setMatrixAt(i, dummy.matrix); const v = 0.7 + R()*0.5; c.setRGB(v, v, v); straw.setColorAt(i, c);
   }
-  scene.add(rock);
+  scene.add(straw);
 
-  // old fence line
-  const posts = []; const wires = [];
-  const A = { x:-230, z:-150 }, B = { x:240, z:-112 };
-  const len = Math.hypot(B.x-A.x, B.z-A.z), stepN = Math.floor(len/3.6);
-  let prevTop = null;
-  for (let k=0;k<=stepN;k++){
-    const t = k/stepN;
-    const x = lerp(A.x, B.x, t) + Math.sin(t*9)*6, z = lerp(A.z, B.z, t) + Math.sin(t*5+1)*4;
-    if (R() < 0.08){ prevTop = null; continue; }
-    const y = H(x,z), lean = (R()-0.5)*0.25;
-    posts.push({ x, y, z, lean });
-    const top = [x, y+1.0, z], mid = [x, y+0.55, z];
-    if (prevTop && R() > 0.12){ wires.push(...prevTop[0], ...top, ...prevTop[1], ...mid); }
-    prevTop = [top, mid];
+  surface('floor', 0, -8.75, 8.75, B.zFar+0.25, -3.5, 4.0);
+
+  // A solid that spans rat height above a surface blocks walking there.
+  for (const s of surfaces){
+    const y = s.y + 0.08;
+    s.blockers = solids.filter(b => b.y0 < y && b.y1 > y && b.x1 > s.x0-0.3 && b.x0 < s.x1+0.3 && b.z1 > s.z0-0.3 && b.z0 < s.z1+0.3);
   }
-  const postMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.05, 0.06, 1.15, 5), new THREE.MeshLambertMaterial({ color:0x6d665a }), posts.length);
-  posts.forEach((p, i) => { dummy.position.set(p.x, p.y+0.5, p.z); dummy.rotation.set(p.lean, 0, p.lean*0.6); dummy.scale.set(1,1,1); dummy.updateMatrix(); postMesh.setMatrixAt(i, dummy.matrix); });
-  scene.add(postMesh);
-  const wg = new THREE.BufferGeometry(); wg.setAttribute('position', new THREE.Float32BufferAttribute(wires, 3));
-  scene.add(new THREE.LineSegments(wg, new THREE.LineBasicMaterial({ color:0x3a3a36 })));
-
-  // shed
-  const shed = new THREE.Group();
-  const wall = new THREE.Mesh(new THREE.BoxGeometry(7, 3.2, 4.5), new THREE.MeshLambertMaterial({ color:0x6a6356 }));
-  wall.position.y = 1.4; shed.add(wall);
-  const roof = new THREE.Mesh(new THREE.CylinderGeometry(3.1, 3.1, 7.6, 3, 1), new THREE.MeshLambertMaterial({ color:0x4a4a48 }));
-  // Point the triangular ridge upward and seat both eaves at the wall top (y=3).
-  roof.rotation.z = Math.PI/2; roof.rotation.x = -Math.PI/2; roof.scale.set(1, 1, 0.55); roof.position.y = 3.0 + 3.1*0.55/2; shed.add(roof);
-  const door = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 2.1), new THREE.MeshBasicMaterial({ color:0x050505 }));
-  door.position.set(1.2, 1.05, 2.32); shed.add(door);
-  const sx = -135, sz = -238; shed.position.set(sx, H(sx,sz)-0.2, sz); shed.rotation.y = 0.35;
-  scene.add(shed);
-  bushes.push({ x:sx, z:sz, r:5 });
 })();
+const surfTotal = surfaces.reduce((n, s) => n + s.weight, 0);
 
-(function buildSky(){
-  const sky = new THREE.Mesh(new THREE.SphereGeometry(3000, 32, 16), new THREE.ShaderMaterial({
-    side: THREE.BackSide, depthWrite:false,
-    uniforms:{uSkyTime:vegetationTime,uSkyMotion:vegetationMotion},
-    vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-    fragmentShader: `
-      varying vec3 vP; uniform float uSkyTime; uniform float uSkyMotion;
-      float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
-      float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+1.0),f.x),f.y);}
-      void main(){
-        vec3 dir=normalize(vP); float h=clamp(dir.y,0.0,1.0);
-        vec3 c=mix(vec3(0.15,0.19,0.17),vec3(0.018,0.028,0.036),pow(h,0.3));
-        vec2 p=dir.xz/(max(dir.y,0.025)+0.22)*2.2+vec2(uSkyTime*uSkyMotion*0.003,0.0);
-        float cloud=noise(p)*0.57+noise(p*2.07)*0.28+noise(p*4.13)*0.15;
-        cloud=smoothstep(0.51,0.76,cloud)*smoothstep(0.01,0.14,h);
-        float moon=pow(max(0.0,dot(dir,normalize(vec3(-0.571,0.189,-0.799)))),24.0);
-        c+=vec3(0.028,0.034,0.03)*cloud+c*moon*0.28;
-        gl_FragColor=vec4(c,1.0);
-      }`
-  }));
-  sky.position.copy(camPos); sky.renderOrder = -2;
-  scene.add(sky);
-
-  const R = sceneRand;
-  const seg = 256, RR = 1700;
-  const pos = [], idx = [];
-  for (let k=0;k<=seg;k++){
-    const a = k/seg*Math.PI*2;
-    const n = fbm(Math.cos(a)*4+10, Math.sin(a)*4-4, 5)*0.5+0.5;
-    const top = 90 + n*260 + Math.abs(vnoise(a*30, 3))*25;
-    const x = CAM.x + Math.sin(a)*RR, z = CAM.z + Math.cos(a)*RR;
-    pos.push(x, top, z, x, -400, z);
-    if (k < seg){ const b = k*2; idx.push(b, b+1, b+2, b+2, b+1, b+3); }
+// dust hanging in the air catches the IR light
+const DUST_N = isCoarse ? 260 : 450;
+const dustPos = new Float32Array(DUST_N*3), dustSeed = new Float32Array(DUST_N);
+for (let i=0;i<DUST_N;i++){
+  dustPos[i*3] = (sceneRand()*2-1)*8.5; dustPos[i*3+1] = 0.3 + sceneRand()*4.6; dustPos[i*3+2] = BARN.zFar + sceneRand()*(BARN.zBack - BARN.zFar - 1);
+  dustSeed[i] = sceneRand()*100;
+}
+const dustGeo = new THREE.BufferGeometry(); dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+const dustPts = new THREE.Points(dustGeo, new THREE.PointsMaterial({ size:0.03, map:softTex, color:0x9a9a9a, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending }));
+dustPts.frustumCulled = false; scene.add(dustPts);
+function updateDust(dt){
+  for (let i=0;i<DUST_N;i++){
+    const k = dustSeed[i], p = i*3;
+    dustPos[p] += (0.05 + Math.sin(simTime*0.3 + k)*0.04)*dt;
+    dustPos[p+1] += Math.sin(simTime*0.5 + k*1.7)*0.03*dt - 0.008*dt;
+    dustPos[p+2] += Math.cos(simTime*0.23 + k*0.6)*0.04*dt;
+    if (dustPos[p] > 8.6) dustPos[p] = -8.6;
+    if (dustPos[p+1] < 0.2) dustPos[p+1] = 4.8;
   }
-  const mg = new THREE.BufferGeometry();
-  mg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); mg.setIndex(idx);
-  const mountains = new THREE.Mesh(mg, new THREE.MeshBasicMaterial({ color:0x0f1714, side:THREE.DoubleSide, fog:false }));
-  scene.add(mountains);
+  dustGeo.attributes.position.needsUpdate = true;
+}
 
-  const N = 1500, sp = new Float32Array(N*3), sc = new Float32Array(N*3);
-  for (let i=0;i<N;i++){
-    const az = R()*Math.PI*2, el = Math.asin(0.04 + R()*0.96), r = 2600;
-    sp[i*3] = camPos.x + Math.cos(el)*Math.sin(az)*r; sp[i*3+1] = camPos.y + Math.sin(el)*r; sp[i*3+2] = camPos.z + Math.cos(el)*Math.cos(az)*r;
-    const b = 0.25 + Math.pow(R(), 5)*1.2; sc[i*3] = b; sc[i*3+1] = b; sc[i*3+2] = b;
-  }
-  const sg = new THREE.BufferGeometry();
-  sg.setAttribute('position', new THREE.BufferAttribute(sp,3)); sg.setAttribute('color', new THREE.BufferAttribute(sc,3));
-  scene.add(new THREE.Points(sg, new THREE.PointsMaterial({ size:1.5, sizeAttenuation:false, vertexColors:true, fog:false, depthWrite:false })));
-
-  const moonDir = new THREE.Vector3(-Math.sin(0.62)*Math.cos(0.19), Math.sin(0.19), -Math.cos(0.62)*Math.cos(0.19));
-  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map:softTex, color:0xdce6d5, opacity:0.2, transparent:true, depthWrite:false, fog:false }));
-  halo.position.copy(camPos).addScaledVector(moonDir, 2400); halo.scale.setScalar(160); scene.add(halo);
-  const disc = new THREE.Sprite(new THREE.SpriteMaterial({ map:makeMoonTex(), color:0xffffff, transparent:true, depthWrite:false, fog:false }));
-  disc.position.copy(halo.position); disc.scale.setScalar(42); scene.add(disc);
-})();
-
-scene.add(new THREE.HemisphereLight(0xb4c6d0, 0x2c2b22, 0.55));
-const moonLight = new THREE.DirectionalLight(0xd8e2ff, 0.42);
-moonLight.position.set(-700, 420, -900); scene.add(moonLight);
-const ir = new THREE.SpotLight(0xffffff, 0.85, 0, 0.2, 1.0, 1);
+scene.add(new THREE.HemisphereLight(0x9aa6b0, 0x2a261e, 0.14));
+const ir = new THREE.SpotLight(0xffffff, 1.7, 90, 0.4, 0.55, 1.1);
 scene.add(ir); scene.add(ir.target);
 
 // ================= rats =================
@@ -1052,33 +858,37 @@ const GAIT_TROT = [0, Math.PI, Math.PI, 0];        // legs are [front-R, front-L
 const GAIT_BOUND = [0, 0, 2.3, 2.3];
 const rats = [];
 const hittable = r => r.state !== 'dead' && r.state !== 'burrow' && !r.removed && r.emerge > 0.5;
-function inField(x, z){ return z <= FIELD.zNear && z >= FIELD.zFar && Math.abs(x) <= xLimit(z); }
-function clampField(p){ p.z = clamp(p.z, FIELD.zFar, FIELD.zNear); const xl = xLimit(p.z); p.x = clamp(p.x, -xl, xl); return p; }
-function inBush(x, z){ for (const b of bushes){ const dx = x-b.x, dz = z-b.z; if (dx*dx+dz*dz < (b.r+0.4)*(b.r+0.4)) return true; } return false; }
-function losClear(tx, ty, tz){
-  const dx = tx-camPos.x, dy = ty-camPos.y, dz = tz-camPos.z, dist = Math.hypot(dx,dz);
-  const n = Math.ceil(dist/1.5);
-  for (let k=1;k<n;k++){ const t = k/n; if (camPos.y+dy*t < H(camPos.x+dx*t, camPos.z+dz*t)+0.03) return false; }
-  return true;
+const inRect = (s, x, z) => x >= s.x0 && x <= s.x1 && z >= s.z0 && z <= s.z1;
+function blocked(s, x, z){
+  for (const b of s.blockers){ if (x > b.x0-0.12 && x < b.x1+0.12 && z > b.z0-0.12 && z < b.z1+0.12) return true; }
+  return false;
 }
+// The head sits well ahead of the rat's centre, so check that point too or it pokes into posts and walls.
+const HEAD_REACH = 0.3;
+const headBlocked = (s, x, z, yaw, scale) => blocked(s, x + Math.sin(yaw)*HEAD_REACH*scale, z + Math.cos(yaw)*HEAD_REACH*scale);
+function pickSurface(){ let k = rnd()*surfTotal; for (const s of surfaces){ k -= s.weight; if (k <= 0) return s; } return surfaces[surfaces.length-1]; }
+function losClear(tx, ty, tz){ return castWorld(camPos, _v3.set(tx, ty, tz)) === Infinity; }
 function findSpawn(){
   const live = rats.filter(hittable);
   for (let tries=0; tries<80; tries++){
-    let x, z;
-    if (live.length && rnd() < 0.45){ const o = live[(rnd()*live.length)|0]; const a = rnd()*6.283, d = 5 + rnd()*10; x = o.x + Math.sin(a)*d; z = o.z + Math.cos(a)*d; }
-    else { z = FIELD.zNear - 8 - rnd()*(FIELD.zNear - FIELD.zFar - 10); const xl = xLimit(z); x = (rnd()*2-1)*xl; }
-    if (!inField(x, z) || inBush(x, z)) continue;
-    let crowded = false; for (const r of rats){ if (!r.removed && Math.hypot(r.x-x, r.z-z) < 3){ crowded = true; break; } }
+    let s, x, z;
+    if (live.length && rnd() < 0.3){ const o = live[(rnd()*live.length)|0]; const a = rnd()*TAU, d = 1.5 + rnd()*4; s = o.surf; x = o.x + Math.sin(a)*d; z = o.z + Math.cos(a)*d; }
+    else { s = pickSurface(); x = lerp(s.x0, s.x1, rnd()); z = lerp(s.z0, s.z1, rnd()); }
+    if (!inRect(s, x, z) || blocked(s, x, z)) continue;
+    let crowded = false; for (const r of rats){ if (!r.removed && Math.hypot(r.x-x, r.z-z, r.y-s.y) < 1.2){ crowded = true; break; } }
     if (crowded) continue;
-    if (tries < 60 && !losClear(x, H(x,z)+0.15, z)) continue;
-    return { x, z };
+    if (tries < 50 && !losClear(x, s.y+0.12, z)) continue;
+    let yaw = NaN;
+    for (let k=0;k<8;k++){ const a = rnd()*TAU; if (!headBlocked(s, x, z, a, 1.25)){ yaw = a; break; } }
+    if (yaw !== yaw) continue;
+    return { s, x, z, yaw };
   }
   return null;
 }
 function spawnRat(initial){
   const p = findSpawn(); if (!p) return false;
   const r = Object.assign(buildRat(), {
-    x:p.x, z:p.z, yaw:rnd()*Math.PI*2, scale:1.0+rnd()*0.25,
+    surf:p.s, x:p.x, y:p.s.y, z:p.z, vy:0, floorY:0, yaw:p.yaw, scale:1.0+rnd()*0.25,
     state:'emerge', t:0, emerge: initial ? 1 : 0, anim:rnd()*10, phase:rnd()*6.28, gait:0,
     curSpeed:0, speed:0, turnRate:3, dx:p.x, dz:p.z, moveT:0,
     rearV:0, rearT:0, neckP:0, neckPT:0, neckY:0, neckYT:0, lookT:0,
@@ -1094,55 +904,66 @@ function setIdle(r, kind){
   r.state = 'idle'; r.curSpeed = 0;
   if (!kind){ const p = rnd(); kind = p < 0.42 ? 'graze' : p < 0.68 ? 'look' : p < 0.84 ? 'rear' : 'sit'; }
   r.idleKind = kind;
-  r.t = kind === 'rear' ? 1.3 + rnd()*1.7 : 1.8 + rnd()*4;
+  r.t = kind === 'rear' ? 1.0 + rnd()*1.4 : 1.2 + rnd()*3;
   r.rearT = kind === 'rear' ? 0.9 + rnd()*0.15 : 0;
   r.neckPT = kind === 'graze' ? 0.5 : kind === 'rear' ? -0.15 : -0.05;
   r.neckYT = 0; r.lookT = 0;
 }
-function goTo(r, x, z, speed, turn, state, free){
-  const p = { x, z };
-  if (free){ p.x = clamp(p.x, T.x0+10, T.x1-10); p.z = clamp(p.z, T.z0+10, 20); } else clampField(p);
-  r.dx = p.x; r.dz = p.z; r.speed = speed; r.turnRate = turn; r.state = state; r.moveT = 0;
+function goTo(r, x, z, speed, turn, state){
+  const s = r.surf;
+  r.dx = clamp(x, s.x0, s.x1); r.dz = clamp(z, s.z0, s.z1); r.speed = speed; r.turnRate = turn; r.state = state; r.moveT = 0;
   r.rearT = 0; r.neckPT = state === 'walk' ? 0.18 : -0.05; r.neckYT = 0;
 }
 function decide(r){
   const p = rnd();
-  if (p < 0.48){ const a = r.yaw + (rnd()-0.5)*2.6, d = 2 + rnd()*7; goTo(r, r.x+Math.sin(a)*d, r.z+Math.cos(a)*d, 0.45+rnd()*0.45, 3.2, 'walk'); }
-  else if (p < 0.62){ const a = r.yaw + (rnd()-0.5)*3.2, d = 4 + rnd()*8; goTo(r, r.x+Math.sin(a)*d, r.z+Math.cos(a)*d, 2.3+rnd()*0.9, 7, 'dash'); }
+  if (p < 0.48){ const a = r.yaw + (rnd()-0.5)*2.6, d = 1 + rnd()*3.5; goTo(r, r.x+Math.sin(a)*d, r.z+Math.cos(a)*d, 0.35+rnd()*0.4, 3.2, 'walk'); }
+  else if (p < 0.66){ const a = r.yaw + (rnd()-0.5)*3.2, d = 2 + rnd()*5; goTo(r, r.x+Math.sin(a)*d, r.z+Math.cos(a)*d, 1.9+rnd()*0.9, 7, 'dash'); }
   else setIdle(r);
 }
 function startle(r, sx, sz, strong){
   if (!hittable(r) || r.state === 'flee') return;
   if (strong){ flee(r, sx, sz); return; }
   if (r.state === 'run'){ runFrom(r, sx, sz); return; }
-  r.state = 'startle'; r.t = 0.35 + rnd()*0.7; r.threatX = sx; r.threatZ = sz;
+  r.state = 'startle'; r.t = 0.25 + rnd()*0.5; r.threatX = sx; r.threatZ = sz;
   r.rearT = 0.75; r.neckPT = -0.2; r.curSpeed = 0;
 }
 function runFrom(r, sx, sz){
-  const a = Math.atan2(r.x-sx, r.z-sz) + (rnd()-0.5)*1.2, d = 6 + rnd()*9;
-  goTo(r, r.x+Math.sin(a)*d, r.z+Math.cos(a)*d, 3 + rnd()*1.2, 8, 'run');
+  const a = Math.atan2(r.x-sx, r.z-sz) + (rnd()-0.5)*1.2, d = 3 + rnd()*4;
+  goTo(r, r.x+Math.sin(a)*d, r.z+Math.cos(a)*d, 2.6 + rnd()*1.0, 8, 'run');
 }
+// Fleeing rats bolt away from the threat and slip into the nearest gap once they get there.
 function flee(r, sx, sz){
   const ax = r.x-sx, az = r.z-sz, al = Math.hypot(ax, az);
-  const cx = r.x-CAM.x, cz = r.z-CAM.z, cl = Math.hypot(cx, cz) || 1;
-  const wAway = al > 0.6 ? 0.55 : 0;
-  const vx = (al > 0.6 ? ax/al : 0)*wAway + cx/cl*(1-wAway);
-  const vz = (al > 0.6 ? az/al : 0)*wAway + cz/cl*(1-wAway);
-  const a = Math.atan2(vx, vz) + (rnd()-0.5)*1.1, d = 22 + rnd()*14;
-  goTo(r, r.x+Math.sin(a)*d, r.z+Math.cos(a)*d, 5 + rnd()*1.6, 10, 'flee', true);
+  const a = (al > 0.3 ? Math.atan2(ax, az) : r.yaw) + (rnd()-0.5)*1.1, d = 6 + rnd()*6;
+  goTo(r, r.x+Math.sin(a)*d, r.z+Math.cos(a)*d, 4.2 + rnd()*1.2, 10, 'flee');
+  Audio.squeak(camPos.distanceTo(r.root.position));
 }
 function killRat(r){
   r.state = 'dead'; r.t = 0; r.fallSide = rnd() < 0.5 ? 1 : -1; r.curSpeed = 0; r.rearT = 0; r.neckPT = 0.3;
+  r.floorY = 0; r.vy = 0;
+  if (r.surf.drop){ for (const s of surfaces){ if (s.y < r.y-0.1 && s.y > r.floorY && r.x > s.x0-0.05 && r.x < s.x1+0.05 && r.z > s.z0-0.05 && r.z < s.z1+0.05) r.floorY = s.y; } }
+  else r.floorY = r.y;
 }
 function moveToward(r, dt){
   const dx = r.dx-r.x, dz = r.dz-r.z, dist = Math.hypot(dx, dz);
   r.moveT += dt;
-  if (dist < Math.max(0.15, r.speed*0.2) || r.moveT > 14){ r.curSpeed = 0; return true; }
-  const diff = wrapA(Math.atan2(dx, dz) - r.yaw), turn = r.turnRate*dt;
-  r.yaw = wrapA(r.yaw + clamp(diff, -turn, turn));
+  if (dist < Math.max(0.1, r.speed*0.12) || r.moveT > 10){ r.curSpeed = 0; return true; }
+  const diff = wrapA(Math.atan2(dx, dz) - r.yaw), turn = r.turnRate*dt, s = r.surf;
+  const newYaw = wrapA(r.yaw + clamp(diff, -turn, turn));
+  if (headBlocked(s, r.x, r.z, newYaw, r.scale) && !headBlocked(s, r.x, r.z, r.yaw, r.scale)){
+    // Too close to turn here (a post on a beam, say): shuffle backwards until the head clears.
+    const bx = clamp(r.x - Math.sin(r.yaw)*0.5*dt, s.x0, s.x1), bz = clamp(r.z - Math.cos(r.yaw)*0.5*dt, s.z0, s.z1);
+    if (blocked(s, bx, bz)){ r.curSpeed = 0; return true; }
+    r.x = bx; r.z = bz; r.curSpeed = 0.5;
+    return false;
+  }
+  r.yaw = newYaw;
   const spd = r.speed*Math.max(0, Math.cos(diff));
   const step = Math.min(dist, spd*dt);
-  r.x += Math.sin(r.yaw)*step; r.z += Math.cos(r.yaw)*step;
+  // Slide along the edges of narrow surfaces, but stop dead at anything in the way.
+  const nx = clamp(r.x + Math.sin(r.yaw)*step, s.x0, s.x1), nz = clamp(r.z + Math.cos(r.yaw)*step, s.z0, s.z1);
+  if (blocked(s, nx, nz) || headBlocked(s, nx, nz, r.yaw, r.scale)){ r.curSpeed = 0; return true; }
+  r.x = nx; r.z = nz;
   r.curSpeed = spd;
   return false;
 }
@@ -1150,19 +971,19 @@ function tickRat(r, dt){
   r.anim += dt;
   switch (r.state){
     case 'emerge':
-      r.t += dt; r.emerge = Math.min(1, r.t/0.8); r.neckPT = -0.1;
+      r.t += dt; r.emerge = Math.min(1, r.t/0.6); r.neckPT = -0.1;
       if (r.emerge >= 1) setIdle(r, 'look');
       break;
     case 'idle':
       r.t -= dt; r.lookT -= dt;
-      if (r.lookT <= 0){ r.lookT = 0.5 + rnd()*1.3; r.neckYT = r.idleKind === 'graze' ? (rnd()-0.5)*0.4 : (rnd()-0.5)*1.1; if (r.idleKind === 'look' && rnd() < 0.3) r.yaw = wrapA(r.yaw + (rnd()-0.5)*1.2); }
+      if (r.lookT <= 0){ r.lookT = 0.5 + rnd()*1.3; r.neckYT = r.idleKind === 'graze' ? (rnd()-0.5)*0.4 : (rnd()-0.5)*1.1; if (r.idleKind === 'look' && rnd() < 0.3){ const a = wrapA(r.yaw + (rnd()-0.5)*1.2); if (!headBlocked(r.surf, r.x, r.z, a, r.scale)) r.yaw = a; } }
       if (r.t <= 0) decide(r);
       break;
     case 'walk': case 'dash': case 'run':
       if (moveToward(r, dt)) setIdle(r, r.state === 'run' ? 'look' : undefined);
       break;
     case 'flee':
-      if (moveToward(r, dt) || r.moveT > 8){ r.state = 'burrow'; r.t = 0; r.curSpeed = 0; }
+      if (moveToward(r, dt) || r.moveT > 4){ r.state = 'burrow'; r.t = 0; r.curSpeed = 0; }
       break;
     case 'startle': {
       r.t -= dt;
@@ -1174,10 +995,14 @@ function tickRat(r, dt){
     case 'dead':
       r.t += dt; r.fall = Math.min(1, r.t/0.3);
       r.hop = Math.sin(Math.min(1, r.t/0.32)*Math.PI)*0.07;
+      if (r.y > r.floorY && r.t > 0.2){
+        r.vy -= CFG.gravity*dt; r.y = Math.max(r.floorY, r.y + r.vy*dt);
+        if (r.y <= r.floorY){ _v1.set(r.x, r.y+0.05, r.z); spawnPuff(_v1, 'dust'); Audio.thud(camPos.distanceTo(_v1)); }
+      }
       if (r.t > 9){ r.emerge = Math.max(0, 1 - (r.t-9)/1.2); if (r.emerge <= 0){ r.removed = true; scene.remove(r.root); } }
       break;
     case 'burrow':
-      r.t += dt; r.emerge = Math.max(0, 1 - r.t/0.55);
+      r.t += dt; r.emerge = Math.max(0, 1 - r.t/0.4);
       if (r.emerge <= 0){
         r.removed = true; scene.remove(r.root);
         if (G.mode === 'playing') G.escaped++;
@@ -1190,13 +1015,11 @@ function tickRat(r, dt){
 function poseRat(r, dt){
   const e = r.emerge, es = e*e*(3-2*e);
   r.root.scale.setScalar(Math.max(0.001, r.scale*(0.35+0.65*es)));
-  r.root.position.set(r.x, H(r.x, r.z) - (1-es)*0.22*r.scale + r.hop, r.z);
+  r.root.position.set(r.x, r.y - (1-es)*0.12*r.scale + r.hop, r.z);
   r.root.rotation.y = r.yaw;
-  const fx = Math.sin(r.yaw), fz = Math.cos(r.yaw), lx = Math.cos(r.yaw), lz = -Math.sin(r.yaw);
-  const slope = (H(r.x+fx*0.3, r.z+fz*0.3) - H(r.x-fx*0.3, r.z-fz*0.3))/0.6;
-  const roll = (H(r.x+lx*0.2, r.z+lz*0.2) - H(r.x-lx*0.2, r.z-lz*0.2))/0.4;
-  r.tilt.rotation.x = -Math.atan(slope);
-  r.tilt.rotation.z = Math.atan(roll) + r.fall*1.45*r.fallSide;
+  const airborne = r.state === 'dead' && r.y > r.floorY;
+  r.tilt.rotation.x = airborne ? (r.t-0.2)*9 : 0;
+  r.tilt.rotation.z = r.fall*1.45*r.fallSide;
   const k = Math.min(1, dt*7);
   r.rearV += (r.rearT - r.rearV)*k;
   r.neckP += (r.neckPT - r.neckP)*Math.min(1, dt*5);
@@ -1278,9 +1101,9 @@ for (let i=0;i<16;i++){
   puffs.push({ grp, mat, sp, life:0, max:1, base:1, grav:3 });
 }
 const PUFF = {
-  dirt: { color:0xe8ecd8, op:0.85, life:1.3, sz:[0.14,0.36], up:[0.8,2.6], spread:1.0, grav:3.5 },
-  head: { color:0x2a2424, op:0.9, life:0.7, sz:[0.04,0.12], up:[0.3,1.3], spread:1.3, grav:4 },
-  body: { color:0x4a4040, op:0.8, life:0.6, sz:[0.04,0.1], up:[0.2,0.9], spread:0.9, grav:4 }
+  dust: { color:0xd8d4c0, op:0.7, life:1.6, sz:[0.05,0.16], up:[0.3,1.2], spread:0.7, grav:1.2 },
+  head: { color:0x2a2424, op:0.9, life:0.7, sz:[0.03,0.09], up:[0.3,1.3], spread:1.3, grav:4 },
+  body: { color:0x4a4040, op:0.8, life:0.6, sz:[0.03,0.08], up:[0.2,0.9], spread:0.9, grav:4 }
 };
 function spawnPuff(p, kind){
   const cfg = PUFF[kind];
@@ -1315,7 +1138,7 @@ const tracer = new THREE.Line(tracerGeo, tracerMat); tracer.frustumCulled = fals
 
 // ================= audio =================
 const Audio = (function(){
-  let ctx = null, master = null, noiseBuf = null, muted = store.get('ns-muted','0') === '1', cricketT = 1;
+  let ctx = null, master = null, noiseBuf = null, muted = store.get('ns-muted','0') === '1', cricketT = 1, creakT = 5;
   function init(){
     if (ctx){ if (ctx.state === 'suspended') ctx.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
@@ -1335,37 +1158,47 @@ const Audio = (function(){
     const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(gain, t+0.005); g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
     o.connect(g); g.connect(master); o.start(t); o.stop(t+dur+0.05);
   }
+  const click = (t, f, g) => noise(t, 0.035, 'bandpass', f, 3, g, 0.001);
   const ok = () => ctx && !muted;
   return {
     init,
     get muted(){ return muted; },
     setMuted(m){ muted = m; store.set('ns-muted', m ? '1' : '0'); if (master) master.gain.value = m ? 0 : 0.8; },
-    shot(){ if (!ok()) return; const t = ctx.currentTime; noise(t, 0.3, 'lowpass', 1700, 0.7, 0.9, 0.003); noise(t, 0.08, 'bandpass', 3300, 1.2, 0.35, 0.002); tone(t, 0.18, 130, 42, 'sine', 0.75); },
-    bolt(){ if (!ok()) return; const t = ctx.currentTime; noise(t+0.32, 0.05, 'highpass', 2600, 1, 0.22, 0.002); noise(t+0.52, 0.07, 'bandpass', 1700, 2, 0.28, 0.002); noise(t+0.78, 0.05, 'highpass', 3000, 1, 0.22, 0.002); },
+    // a PCP rifle: a sharp crack of air and the hammer's clack, with a short barn echo
+    shot(){ if (!ok()) return; const t = ctx.currentTime; noise(t, 0.14, 'bandpass', 1100, 0.8, 0.7, 0.002); click(t, 3800, 0.4); tone(t, 0.07, 110, 55, 'sine', 0.25); noise(t+0.09, 0.25, 'lowpass', 900, 0.7, 0.06, 0.01); },
+    cycle(){ if (!ok()) return; const t = ctx.currentTime; click(t+0.12, 2600, 0.25); click(t+0.24, 1900, 0.3); },
     beep(last){ if (!ok()) return; const t = ctx.currentTime; tone(t, last ? 0.55 : 0.09, last ? 660 : 1320, last ? 640 : 1300, 'square', last ? 0.07 : 0.05); },
-    hit(head){ if (!ok()) return; const t = ctx.currentTime + 0.05; tone(t, 0.12, head ? 240 : 170, 60, 'triangle', 0.35); noise(t, 0.1, 'lowpass', 700, 1, 0.3, 0.003); if (head) tone(t+0.12, 0.22, 880, 860, 'sine', 0.08); },
+    hit(head){ if (!ok()) return; const t = ctx.currentTime + 0.03; tone(t, 0.1, head ? 240 : 170, 60, 'triangle', 0.3); noise(t, 0.08, 'lowpass', 700, 1, 0.25, 0.003); if (head) tone(t+0.1, 0.2, 880, 860, 'sine', 0.07); },
+    impact(dist){ if (!ok()) return; const t = ctx.currentTime + dist/CFG.muzzle, g = clamp(6/(dist+4), 0.08, 0.5); click(t, 1700, g); tone(t, 0.06, 320, 140, 'triangle', g*0.5); },
+    thud(dist){ if (!ok()) return; const t = ctx.currentTime, g = clamp(5/(dist+4), 0.05, 0.3); noise(t, 0.12, 'lowpass', 400, 1, g, 0.004); },
+    squeak(dist){ if (!ok()) return; const t = ctx.currentTime, g = clamp(1.2/(dist+6), 0.01, 0.06); tone(t, 0.07, 3400, 4300, 'sine', g); tone(t+0.09, 0.05, 3900, 3300, 'sine', g*0.7); },
     tick(dt){
       if (!ok()) return;
-      cricketT -= dt;
-      if (cricketT <= 0){
-        cricketT = 0.45 + Math.random()*1.4;
-        const t = ctx.currentTime, f = 4200 + Math.random()*700, n = 2 + (Math.random()*3|0), g = 0.006 + Math.random()*0.01;
-        for (let i=0;i<n;i++) tone(t + i*0.055, 0.035, f, f*0.98, 'sine', g);
+      cricketT -= dt; creakT -= dt;
+      if (cricketT <= 0){ // crickets outside, muffled by the walls
+        cricketT = 0.6 + Math.random()*1.8;
+        const t = ctx.currentTime, f = 3900 + Math.random()*500, n = 2 + (Math.random()*3|0), g = 0.002 + Math.random()*0.004;
+        for (let i=0;i<n;i++) tone(t + i*0.06, 0.035, f, f*0.98, 'sine', g);
+      }
+      if (creakT <= 0){ // timber settling
+        creakT = 7 + Math.random()*12;
+        const t = ctx.currentTime, f = 180 + Math.random()*120;
+        noise(t, 0.5 + Math.random()*0.4, 'bandpass', f, 12, 0.05, 0.15);
       }
     }
   };
 })();
 
 // ================= game state =================
-const G = { mode:'title', score:0, kills:0, escaped:0, heads:0, shots:0, streak:0, bestStreak:0, longest:0, boltT:0, spawnT:0, endWait:0, timeLeft:0, timeUp:false, elapsed:0 };
+const G = { mode:'title', score:0, kills:0, escaped:0, wounds:0, highs:0, quicks:0, shots:0, streak:0, bestStreak:0, boltT:0, lastKillT:-9, spawnT:0, endWait:0, timeLeft:0, timeUp:false, elapsed:0 };
 const bullets = [];
-let yaw = 0, pitch = -0.035, zoom = CFG.zoomStart, zoomTarget = CFG.zoomStart;
+let yaw = 0, pitch = 0.05, zoom = CFG.zoomStart, zoomTarget = CFG.zoomStart;
 let aimDX = 0, aimDY = 0, zoomHold = 0;
 let sens = parseFloat(store.get('ns-sens', '1.5')) || 1.5;
 let gyroDYaw = 0, gyroDPitch = 0;
 let gyroSens = parseFloat(store.get('ns-gsens', '1')) || 1;
 const GYRO_GAIN = 0.02; // 1/50 of true device rotation at gyroSens = 1
-let breath = 1, exhausted = false, keyHold = false, mouseHold = false, btnHold = false, swayAmp = 0.0005, swayT = 0, swayRate = 1;
+let breath = 1, exhausted = false, keyHold = false, mouseHold = false, btnHold = false, swayAmp = 0.011, swayT = 0, swayRate = 1;
 let recoilT = 9, recoilKick = 0, recoilYawKick = 0, flash = 0;
 let simTime = 0, realTime = 0;
 let W = innerWidth, Hh = innerHeight, D = 400;
@@ -1378,7 +1211,7 @@ function circleRad(){ return (CFG.baseDeg/zoom)*Math.PI/180; }
 
 // ================= HUD =================
 const ui = {};
-['score','kills','esc','streak','remain','mag','osd','osd2','oRng','impact','oZoom','oHdg','oState','oBreath','breathBar','msgs','hud','touch','title','pause','result','best','keys','ctlDesk','ctlTouch','pauseHint','bMute','trLabel','modeNote','bFinish'].forEach(id => ui[id] = $(id));
+['score','kills','esc','streak','remain','mag','osd','osd2','oRng','oZoom','oHdg','oState','oBreath','breathBar','msgs','hud','touch','title','pause','result','best','keys','ctlDesk','ctlTouch','pauseHint','bMute','trLabel','modeNote','bFinish'].forEach(id => ui[id] = $(id));
 const chamber = ui.mag.firstElementChild;
 const hudCache = {};
 function setT(key, v){ if (hudCache[key] !== v){ hudCache[key] = v; ui[key].textContent = v; } }
@@ -1419,35 +1252,25 @@ function showMsg(m1, m2, cls){
   while (ui.msgs.children.length > 5) ui.msgs.firstElementChild.remove();
 }
 
+// Three short thick posts (left, right, bottom) pointing at an open centre: a light hunting scope,
+// not the long-range mil reticle.
 function drawReticle(){
   const c = $('reticle');
   c.width = Math.floor(W*DPR); c.height = Math.floor(Hh*DPR);
   const g = c.getContext('2d');
   g.setTransform(DPR,0,0,DPR,0,0);
   g.clearRect(0,0,W,Hh);
-  const cx = W/2, cy = Hh/2, R = D/2;
-  const pw = Math.max(3, R*0.014), inner = R*0.36;
-  g.fillStyle = 'rgba(0,0,0,0.9)';
-  g.fillRect(cx-R, cy-pw/2, R-inner, pw);
-  g.fillRect(cx+inner, cy-pw/2, R-inner, pw);
-  g.fillRect(cx-pw/2, cy+inner, pw, R-inner);
-  g.fillRect(cx-pw*0.25, cy-R, pw*0.5, R-inner);
-  const lines = (w, style) => {
-    g.strokeStyle = style; g.lineWidth = w;
-    g.beginPath(); g.moveTo(cx-inner, cy); g.lineTo(cx+inner, cy); g.moveTo(cx, cy-inner); g.lineTo(cx, cy+inner); g.stroke();
-    const step = inner/6;
+  const cx = W/2, cy = Hh/2, R = D/2, gap = R*0.05, pw = Math.max(3, R*0.013), len = pw*13;
+  const posts = (w, style) => {
+    g.strokeStyle = style; g.lineWidth = w; g.lineCap = 'butt';
     g.beginPath();
-    for (let i=1;i<=6;i++){
-      const L = i%3 === 0 ? 6 : 3.5;
-      g.moveTo(cx+step*i, cy-L); g.lineTo(cx+step*i, cy+L);
-      g.moveTo(cx-step*i, cy-L); g.lineTo(cx-step*i, cy+L);
-      g.moveTo(cx-L, cy+step*i); g.lineTo(cx+L, cy+step*i);
-      g.moveTo(cx-L*0.6, cy-step*i); g.lineTo(cx+L*0.6, cy-step*i);
-    }
+    g.moveTo(cx-gap-len, cy); g.lineTo(cx-gap, cy);
+    g.moveTo(cx+gap+len, cy); g.lineTo(cx+gap, cy);
+    g.moveTo(cx, cy+gap+len); g.lineTo(cx, cy+gap);
     g.stroke();
   };
-  lines(3, 'rgba(170,255,160,0.16)');
-  lines(1.1, 'rgba(0,0,0,0.95)');
+  posts(pw+3, 'rgba(170,255,160,0.1)');
+  posts(pw, 'rgba(0,0,0,0.9)');
 }
 function layout(){
   W = innerWidth; Hh = innerHeight;
@@ -1480,20 +1303,42 @@ function segEllipsoid(obj, p0, p1){
   if (t0 < 0 && t1 >= 0) return 0;
   return Infinity;
 }
-function segTerrain(p0, p1){
-  if (p0.y < H(p0.x, p0.z)) return 0;
-  const len = p0.distanceTo(p1), n = Math.max(1, Math.ceil(len/0.4));
-  let prev = 0;
-  for (let i=1;i<=n;i++){
-    const t = i/n;
-    if (lerp(p0.y,p1.y,t) < H(lerp(p0.x,p1.x,t), lerp(p0.z,p1.z,t))){
-      let lo = prev, hi = t;
-      for (let k=0;k<10;k++){ const m = (lo+hi)/2; if (lerp(p0.y,p1.y,m) < H(lerp(p0.x,p1.x,m), lerp(p0.z,p1.z,m))) hi = m; else lo = m; }
-      return hi;
-    }
-    prev = t;
-  }
+// Slab test against one axis-aligned box; returns the entry fraction along p0->p1.
+function segBox(b, ox, oy, oz, dx, dy, dz){
+  let t0 = 0, t1 = 1, a, c, s;
+  if (Math.abs(dx) < 1e-9){ if (ox < b.x0 || ox > b.x1) return Infinity; }
+  else { a = (b.x0-ox)/dx; c = (b.x1-ox)/dx; if (a > c){ s = a; a = c; c = s; } if (a > t0) t0 = a; if (c < t1) t1 = c; if (t0 > t1) return Infinity; }
+  if (Math.abs(dy) < 1e-9){ if (oy < b.y0 || oy > b.y1) return Infinity; }
+  else { a = (b.y0-oy)/dy; c = (b.y1-oy)/dy; if (a > c){ s = a; a = c; c = s; } if (a > t0) t0 = a; if (c < t1) t1 = c; if (t0 > t1) return Infinity; }
+  if (Math.abs(dz) < 1e-9){ if (oz < b.z0 || oz > b.z1) return Infinity; }
+  else { a = (b.z0-oz)/dz; c = (b.z1-oz)/dz; if (a > c){ s = a; a = c; c = s; } if (a > t0) t0 = a; if (c < t1) t1 = c; if (t0 > t1) return Infinity; }
+  return t0;
+}
+// The roof height is linear in x on each side of the ridge, so each piece solves exactly.
+function segRoofPiece(p0, p1, ta, tb){
+  const xa = lerp(p0.x, p1.x, ta), xb = lerp(p0.x, p1.x, tb);
+  const fa = lerp(p0.y, p1.y, ta) - roofY(xa), fb = lerp(p0.y, p1.y, tb) - roofY(xb);
+  if (fa >= 0) return ta;
+  if (fb >= 0) return ta + (tb-ta)*(-fa)/(fb-fa);
   return Infinity;
+}
+function segRoof(p0, p1){
+  if ((p0.x < 0) !== (p1.x < 0)){
+    const tm = p0.x/(p0.x-p1.x), t = segRoofPiece(p0, p1, 0, tm);
+    return t !== Infinity ? t : segRoofPiece(p0, p1, tm, 1);
+  }
+  return segRoofPiece(p0, p1, 0, 1);
+}
+function castWorld(p0, p1){
+  let best = segRoof(p0, p1);
+  const dx = p1.x-p0.x, dy = p1.y-p0.y, dz = p1.z-p0.z;
+  const minX = Math.min(p0.x, p1.x), maxX = Math.max(p0.x, p1.x), minY = Math.min(p0.y, p1.y), maxY = Math.max(p0.y, p1.y), minZ = Math.min(p0.z, p1.z), maxZ = Math.max(p0.z, p1.z);
+  for (const b of solids){
+    if (b.x1 < minX || b.x0 > maxX || b.y1 < minY || b.y0 > maxY || b.z1 < minZ || b.z0 > maxZ) continue;
+    const t = segBox(b, p0.x, p0.y, p0.z, dx, dy, dz);
+    if (t < best) best = t;
+  }
+  return best;
 }
 function segPointDist2(px,py,pz, p0, p1){
   const dx = p1.x-p0.x, dy = p1.y-p0.y, dz = p1.z-p0.z, L = dx*dx+dy*dy+dz*dz;
@@ -1513,16 +1358,29 @@ function castRats(p0, p1){
 }
 function viewDir(yw, pt, out){ return out.set(-Math.sin(yw)*Math.cos(pt), Math.sin(pt), -Math.cos(yw)*Math.cos(pt)); }
 
+// The bore sits CFG.sightH under the scope and is tilted up so the pellet crosses the
+// line of sight at the zero range: inside it the shot lands low, just past it a touch high.
+const ZERO_ANGLE = Math.atan(CFG.sightH/CFG.zeroRange) + CFG.gravity*CFG.zeroRange/(2*CFG.muzzle*CFG.muzzle);
+const _mR = new THREE.Vector3(), _mF = new THREE.Vector3(), _mU = new THREE.Vector3();
+function muzzleState(yw, pt, pos, vel){
+  viewDir(yw, pt, _mF);
+  _mR.set(Math.cos(yw), 0, -Math.sin(yw));
+  _mU.crossVectors(_mR, _mF);
+  pos.copy(camPos).addScaledVector(_mU, -CFG.sightH).addScaledVector(_mF, 0.3);
+  viewDir(yw, pt + ZERO_ANGLE, vel).multiplyScalar(CFG.muzzle);
+}
+
 function fire(){
   if (G.mode !== 'playing' || G.timeUp) return;
   if (G.boltT > 0) return;
   G.shots++;
-  const dir = viewDir(view.yaw, view.pitch, new THREE.Vector3());
-  bullets.push({ pos: camPos.clone().addScaledVector(dir, 0.6), velocity:dir.multiplyScalar(CFG.muzzle), dist:0, age:0 });
-  recoilT = 0; recoilKick = view.circleRad*0.38; recoilYawKick = (rnd()-0.5)*view.circleRad*0.08;
-  flash = 0.1;
+  const pos = new THREE.Vector3(), velocity = new THREE.Vector3();
+  muzzleState(view.yaw, view.pitch, pos, velocity);
+  bullets.push({ pos, velocity, dist:0, age:0 });
+  recoilT = 0; recoilKick = 0.0035; recoilYawKick = (rnd()-0.5)*0.0015;
+  flash = 0.012;
   Audio.shot();
-  G.boltT = CFG.cooldown; Audio.bolt();
+  G.boltT = CFG.cooldown; Audio.cycle();
 }
 function updateBullets(dt){
   if (!(dt > 0)) return;
@@ -1530,14 +1388,13 @@ function updateBullets(dt){
     const b = bullets[i];
     let done = false;
     // Exact constant-acceleration integration keeps the drop independent of FPS.
-    // Short chords keep collision checks close to the parabola, even on slow frames.
     for (let remaining=dt; remaining>1e-8 && !done;){
       const stepDt = Math.min(remaining, 1/120);
       _p0.copy(b.pos); _p1.copy(b.pos).addScaledVector(b.velocity, stepDt);
       _p1.y -= 0.5*CFG.gravity*stepDt*stepDt;
-      const rc = castRats(_p0, _p1), tt = segTerrain(_p0, _p1);
-      const ratHit = rc.rat && rc.t <= tt;
-      const hitT = ratHit ? rc.t : tt;
+      const rc = castRats(_p0, _p1), tw = castWorld(_p0, _p1);
+      const ratHit = rc.rat && rc.t <= tw;
+      const hitT = ratHit ? rc.t : tw;
       const fraction = hitT === Infinity ? 1 : hitT;
       b.pos.copy(_p0).lerp(_p1, fraction);
       b.dist += _p0.distanceTo(b.pos);
@@ -1545,107 +1402,88 @@ function updateBullets(dt){
       b.velocity.y -= CFG.gravity*stepDt*fraction;
       if (hitT !== Infinity){
         _hit.copy(b.pos);
-        if (ratHit) onRatHit(rc.rat, rc.part, _hit); else onGroundHit(_hit);
+        if (ratHit) onRatHit(rc.rat, rc.part, _hit); else onWorldHit(_hit, _p0, _p1);
         done = true;
-      } else if (b.dist > 1500) done = true;
+      } else if (b.dist > 300) done = true;
       remaining -= stepDt;
     }
-    // Reconstruct the last few metres of flight, including the downward velocity.
-    const trailTime = Math.min(b.age, 9/b.velocity.length());
+    const trailTime = Math.min(b.age, 2.5/b.velocity.length());
     tracerPos[0] = b.pos.x - b.velocity.x*trailTime;
     tracerPos[1] = b.pos.y - b.velocity.y*trailTime - 0.5*CFG.gravity*trailTime*trailTime;
     tracerPos[2] = b.pos.z - b.velocity.z*trailTime;
     tracerPos[3] = b.pos.x; tracerPos[4] = b.pos.y; tracerPos[5] = b.pos.z;
-    tracerGeo.attributes.position.needsUpdate = true; tracerMat.opacity = 0.32;
+    tracerGeo.attributes.position.needsUpdate = true; tracerMat.opacity = 0.22;
     if (done) bullets.splice(i, 1);
   }
-  if (!bullets.length) tracerMat.opacity = Math.max(0, tracerMat.opacity - dt*2.5);
+  if (!bullets.length) tracerMat.opacity = Math.max(0, tracerMat.opacity - dt*3);
 }
-function nearbyStartle(px, pz, exclude, strongR, weakR, strongChance){
+function nearbyStartle(px, py, pz, exclude, strongR, weakR, strongChance){
   for (const r of rats){
     if (r === exclude || !hittable(r)) continue;
-    const d = Math.hypot(r.x-px, r.z-pz);
+    // Floors and beams muffle a strike, so vertical distance counts for more.
+    const d = Math.hypot(r.x-px, r.z-pz, (r.y-py)*1.8);
     if (d < strongR) startle(r, px, pz, rnd() < strongChance);
     else if (d < weakR) startle(r, px, pz, false);
   }
 }
 function onRatHit(r, part, point){
-  const dist = Math.round(camPos.distanceTo(point));
+  const dist = camPos.distanceTo(point), dm = Math.round(dist);
   const head = part === 'head';
   const moving = r.curSpeed > 1.2;
+  const high = r.y >= 2;
+  const quick = G.elapsed - G.lastKillT < 1.2;
+  spawnPuff(point, part);
+  // A pellet only kills with a head shot; hit anywhere else, the rat runs off wounded.
+  if (!head){
+    G.wounds++; G.streak = 0;
+    flee(r, camPos.x, camPos.z);
+    showMsg('浅い', `${dm}m　体に当たって逃げ出した`, 'wound');
+    Audio.hit(false);
+    return;
+  }
   killRat(r);
-  G.kills++; G.streak++; G.bestStreak = Math.max(G.bestStreak, G.streak); G.longest = Math.max(G.longest, dist);
-  if (head) G.heads++;
-  // A 100m body hit is worth 100 points; doubling distance quadruples its bonus.
-  // Headshots double the shot value (so they score what they did when only headshots killed).
-  let pts = 50 + Math.round(dist*dist/200);
-  if (moving) pts = Math.round(pts*1.5);
-  if (head) pts *= 2;
+  G.kills++; G.streak++; G.bestStreak = Math.max(G.bestStreak, G.streak); G.lastKillT = G.elapsed;
+  if (high) G.highs++;
+  if (quick) G.quicks++;
+  // Range matters far less at barn distances; movement, height and pace carry the score.
+  let pts = 120 + dist*8;
+  if (moving) pts *= 1.5;
+  if (high) pts *= 1.3;
+  pts = Math.round(pts);
+  if (quick) pts += 80;
   pts += Math.min(G.streak-1, 8)*25;
   G.score += pts;
-  let sub = `${dist}m　+${pts}`;
-  if (head) sub += '　×2';
+  let sub = `${dm}m　+${pts}`;
   if (moving) sub += '　動く標的';
+  if (high) sub += '　高所';
+  if (quick) sub += '　速射';
   if (G.streak > 1) sub += `　${G.streak}連続`;
-  showMsg(head ? 'ヘッドショット' : '命中', sub, head ? 'head' : 'wound');
-  spawnPuff(point, part);
-  Audio.hit(head);
-  nearbyStartle(r.x, r.z, r, 0, 6, 0);
+  showMsg('ヘッドショット', sub, 'head');
+  Audio.hit(true);
+  nearbyStartle(r.x, r.y, r.z, r, 0, 4, 0);
 }
-function onGroundHit(point){
+function onWorldHit(point, p0, p1){
   G.streak = 0;
-  spawnPuff(point, 'dirt');
+  // Back the puff off the surface along the flight path so it is not buried in the wood.
+  _v2.copy(p0).sub(p1).normalize();
+  _v1.copy(point).addScaledVector(_v2, 0.06);
+  spawnPuff(_v1, 'dust');
+  Audio.impact(camPos.distanceTo(point));
   let nearest = Infinity;
   for (const r of rats){ if (!hittable(r)) continue; r.headHit.getWorldPosition(_v1); nearest = Math.min(nearest, _v1.distanceTo(point)); }
-  nearbyStartle(point.x, point.z, null, 1.1, 4.5, 0.55);
-  if (nearest < 1.5) showMsg('外れ', `至近弾 ${Math.max(1, Math.round(nearest*100))}cm`, 'miss');
+  if (nearest < 0.6) showMsg('外れ', `至近弾 ${Math.max(1, Math.round(nearest*100))}cm`, 'miss');
   else showMsg('外れ', '', 'miss');
 }
 let rangeT = 0;
-let impactDrop = NaN; // how far below the aim line the bullet lands, as an angle
-const _tp0 = new THREE.Vector3(), _tp1 = new THREE.Vector3(), _tv = new THREE.Vector3();
-// Fly a ghost bullet along the current aim with the same physics as updateBullets
-// (coarser chords), and return the angle between the aim line and where it lands.
-function predictDrop(dir){
-  _tp0.copy(camPos).addScaledVector(dir, 0.6);
-  _tv.copy(dir).multiplyScalar(CFG.muzzle);
-  const stepDt = 1/60;
-  for (let dist=0; dist<1200;){
-    _tp1.copy(_tp0).addScaledVector(_tv, stepDt);
-    _tp1.y -= 0.5*CFG.gravity*stepDt*stepDt;
-    const rc = castRats(_tp0, _tp1), tt = segTerrain(_tp0, _tp1);
-    const hitT = rc.rat && rc.t <= tt ? rc.t : tt;
-    if (hitT !== Infinity){
-      _tp0.lerp(_tp1, hitT).sub(camPos);
-      return view.pitch - Math.atan2(_tp0.y, Math.hypot(_tp0.x, _tp0.z));
-    }
-    dist += _tp0.distanceTo(_tp1);
-    _tp0.copy(_tp1);
-    _tv.y -= CFG.gravity*stepDt;
-  }
-  return NaN;
-}
-function updateImpact(){
-  const R = D/2, py = Math.tan(impactDrop)/Math.tan(view.circleRad/2)*R;
-  const show = G.mode === 'playing' && py === py && py > -R*0.9 && py < R*0.9;
-  if (hudCache.impactShow !== show){ hudCache.impactShow = show; ui.impact.style.display = show ? 'block' : 'none'; }
-  if (show) ui.impact.style.transform = `translate(${W/2}px,${(Hh/2 + py).toFixed(1)}px)`;
-}
 function updateRange(dt){
   rangeT -= dt; if (rangeT > 0) return; rangeT = 0.1;
   const dir = viewDir(view.yaw, view.pitch, _v2);
-  let range = Infinity, prev = 0;
-  for (let d=1.5; d<=1200; d+=1.5){
-    const x = camPos.x+dir.x*d, y = camPos.y+dir.y*d, z = camPos.z+dir.z*d;
-    if (y < H(x, z)){ let lo = prev, hi = d; for (let k=0;k<8;k++){ const m = (lo+hi)/2; if (camPos.y+dir.y*m < H(camPos.x+dir.x*m, camPos.z+dir.z*m)) hi = m; else lo = m; } range = hi; break; }
-    if (y > 260) break;
-    prev = d;
-  }
-  _p0.copy(camPos); _p1.copy(camPos).addScaledVector(dir, Math.min(range, 1200));
+  _p0.copy(camPos); _p1.copy(camPos).addScaledVector(dir, 200);
+  let t = castWorld(_p0, _p1);
   const rc = castRats(_p0, _p1);
-  if (rc.rat) range = rc.t*Math.min(range, 1200);
-  impactDrop = predictDrop(dir);
-  setT('oRng', 'RNG ' + (range === Infinity ? '----' : String(Math.round(range)).padStart(4)) + ' M');
+  if (rc.rat && rc.t < t) t = rc.t;
+  const range = t === Infinity ? Infinity : t*200;
+  setT('oRng', 'RNG ' + (range === Infinity ? '----' : range.toFixed(1).padStart(5)) + ' M');
 }
 
 // ================= flow =================
@@ -1653,10 +1491,10 @@ function clearRats(){ for (const r of rats) scene.remove(r.root); rats.length = 
 function startGame(){
   Audio.init();
   clearRats();
-  Object.assign(G, { mode:'playing', score:0, kills:0, escaped:0, heads:0, shots:0, streak:0, bestStreak:0, longest:0, boltT:0, spawnT:1.5, endWait:0, timeLeft:MODE.time, timeUp:false, elapsed:0 });
+  Object.assign(G, { mode:'playing', score:0, kills:0, escaped:0, wounds:0, highs:0, quicks:0, shots:0, streak:0, bestStreak:0, boltT:0, lastKillT:-9, spawnT:1.2, endWait:0, timeLeft:MODE.time, timeUp:false, elapsed:0 });
   for (let i=0;i<MODE.initial;i++) spawnRat(true);
   hudCache.urgent = undefined; ui.remain.classList.remove('urgent');
-  yaw = 0; pitch = -0.035; zoom = zoomTarget = CFG.zoomStart; breath = 1; exhausted = false;
+  yaw = 0; pitch = 0.05; zoom = zoomTarget = CFG.zoomStart; breath = 1; exhausted = false;
   bindGyro(gyroOn);
   ui.title.classList.add('is-hidden'); ui.result.classList.add('is-hidden'); ui.pause.classList.add('is-hidden');
   ui.hud.classList.remove('is-hidden');
@@ -1670,7 +1508,7 @@ function startGame(){
 function toTitle(){
   G.mode = 'title'; bindGyro(false);
   clearRats();
-  for (let i=0;i<16;i++) spawnRat(true);
+  for (let i=0;i<10;i++) spawnRat(true);
   ui.hud.classList.add('is-hidden'); ui.touch.classList.add('is-hidden');
   ui.pause.classList.add('is-hidden'); ui.result.classList.add('is-hidden'); ui.title.classList.remove('is-hidden');
   document.body.classList.remove('aiming');
@@ -1680,7 +1518,7 @@ function toTitle(){
 function renderBest(){ const b = getBest(MODE); ui.best.textContent = b > 0 ? `${MODE.name}の自己ベスト ${b.toLocaleString('ja-JP')}点` : ''; }
 const modeBtns = [...document.querySelectorAll('#modes .mode')];
 function selectMode(key, focus){
-  MODE = MODES[key] || MODES.sa; store.set('ns-mode', MODE.key);
+  MODE = MODES[key] || MODES.sa; store.set('nsb-mode', MODE.key);
   for (const b of modeBtns){ const on = b.dataset.mode === MODE.key; b.setAttribute('aria-checked', on ? 'true' : 'false'); b.tabIndex = on ? 0 : -1; if (on && focus) b.focus(); }
   ui.modeNote.textContent = MODE.note;
   renderBest();
@@ -1736,8 +1574,9 @@ function endGame(){
   rows.push(
     ['撃った弾', `${G.shots}発`],
     ['命中率', `${Math.round(acc*100)}%`],
-    ['ヘッドショット', G.kills ? `${G.heads}回（${Math.round(G.heads/G.kills*100)}%）` : '―'],
-    ['最長キル', G.longest ? `${G.longest}m` : '―'],
+    ['体に当てて逃がした', `${G.wounds}匹`],
+    ['高所で仕留めた', `${G.highs}匹`],
+    ['速射', `${G.quicks}回`],
     ['最大連続', `${G.bestStreak}回`]
   );
   if (ranked){
@@ -1909,8 +1748,8 @@ if (touchUI){ ui.ctlDesk.classList.add('is-hidden'); ui.ctlTouch.classList.remov
 // ================= main loop =================
 function updateAim(dt){
   if (G.mode === 'title'){
-    yaw = Math.sin(realTime*0.045)*0.42; pitch = -0.03 + Math.sin(realTime*0.07)*0.012;
-    zoom += (4.5 - zoom)*Math.min(1, dt*2); aimDX = aimDY = 0; gyroDYaw = gyroDPitch = 0;
+    yaw = Math.sin(realTime*0.045)*0.5; pitch = 0.12 + Math.sin(realTime*0.07)*0.14;
+    zoom += (2.2 - zoom)*Math.min(1, dt*2); aimDX = aimDY = 0; gyroDYaw = gyroDPitch = 0;
   } else {
     const cr = circleRad();
     const perPx = cr/D*sens;
@@ -1925,7 +1764,7 @@ function updateAim(dt){
       if (zoomHold) zoomTarget = clamp(zoomTarget*Math.exp(zoomHold*dt*1.8), CFG.zoomMin, CFG.zoomMax);
     }
     aimDX = aimDY = 0; gyroDYaw = gyroDPitch = 0;
-    yaw = clamp(yaw, -1.2, 1.2); pitch = clamp(pitch, -0.4, 0.16);
+    yaw = clamp(yaw, -1.3, 1.3); pitch = clamp(pitch, -0.55, 0.85);
     zoom = Math.exp(lerp(Math.log(zoom), Math.log(zoomTarget), 1 - Math.exp(-dt*14)));
   }
   const wantHold = (keyHold || mouseHold || btnHold) && G.mode === 'playing';
@@ -1935,13 +1774,15 @@ function updateAim(dt){
     if (breath <= 0) exhausted = true;
     if (exhausted && breath > 0.45) exhausted = false;
   }
-  const target = exhausted ? 0.0013 : (touchUI ? 0.00036 : 0.00056);
+  // Sway is an angle, so it shrinks with range. Targets here are ~10x closer than in the pasture,
+  // so these are sized to wobble about twice as many centimetres at the target as the pasture rifle does.
+  const target = exhausted ? 0.025 : (touchUI ? 0.007 : 0.011);
   swayAmp += (target - swayAmp)*Math.min(1, dt*2);
   // Holding the breath stops the sway where it is instead of pulling the aim back to centre:
   // the sway clock itself slows to a halt, leaving only a faint tremor.
   swayRate += ((holding ? 0 : 1) - swayRate)*Math.min(1, dt*12);
   if (G.mode !== 'paused') swayT += dt*swayRate;
-  const t = swayT, tremor = (1 - swayRate)*0.00003;
+  const t = swayT, tremor = (1 - swayRate)*0.0003;
   const sx = (Math.sin(t*0.9)*0.55 + Math.sin(t*2.3+1.3)*0.3 + Math.sin(t*5.1+0.5)*0.15)*swayAmp + Math.sin(simTime*7.3)*tremor;
   const sy = (Math.sin(t*0.7+2.1)*0.45 + Math.sin(t*1.9+0.7)*0.35 + Math.sin(t*4.3)*0.2 + Math.sin(t*1.5)*0.5)*swayAmp + Math.sin(simTime*6.1+1.7)*tremor;
   recoilT += dt;
@@ -1989,6 +1830,7 @@ function frame(now){
     for (let i=rats.length-1;i>=0;i--) if (rats[i].removed) rats.splice(i, 1);
     updateBullets(sdt);
     updatePuffs(sdt);
+    updateDust(sdt);
     Audio.tick(sdt);
   }
   updateEyes();
@@ -1997,13 +1839,12 @@ function frame(now){
   camera.fov = 2*Math.atan(Math.tan(cr/2)*Hh/D)*180/Math.PI;
   camera.updateProjectionMatrix();
   camera.rotation.set(view.pitch, view.yaw, 0);
-  updateVegetation();
   viewDir(view.yaw, view.pitch, view.dir);
   ir.position.copy(camPos);
-  ir.target.position.copy(camPos).addScaledVector(view.dir, 60);
+  ir.target.position.copy(camPos).addScaledVector(view.dir, 20);
   ir.target.updateMatrixWorld();
-  ir.angle = clamp(cr*0.8, 0.03, 0.25);
-  eyeMat.size = 4 + zoom*0.1;
+  ir.angle = clamp(cr*0.75, 0.12, 0.5);
+  eyeMat.size = 3 + zoom*0.35;
   flash = Math.max(0, flash - dt*0.8);
   postMat.uniforms.uTime.value = realTime;
   postMat.uniforms.uFlash.value = flash;
@@ -2013,14 +1854,14 @@ function frame(now){
   renderer.setRenderTarget(null);
   renderer.render(postScene, postCam);
 
-  if (G.mode !== 'title'){ updateRange(dt); updateImpact(); updateHUD(); }
+  if (G.mode !== 'title'){ updateRange(dt); updateHUD(); }
 }
 
 layout();
 selectMode(MODE.key);
 toTitle();
 requestAnimationFrame(frame);
-window.__ns = { G, rats, H, camPos, view, fire, startGame, setAim(y, p, z){ yaw = y; pitch = p; zoom = zoomTarget = z; }, losClear, viewDir };
+window.__ns = { G, rats, surfaces, solids, castWorld, camPos, view, fire, startGame, setAim(y, p, z){ yaw = y; pitch = p; zoom = zoomTarget = z; }, losClear, viewDir };
 })();
 </script>
 </body>
